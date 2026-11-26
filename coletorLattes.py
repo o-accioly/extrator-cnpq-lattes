@@ -6,7 +6,10 @@ import os
 import re
 import sys
 import datetime
-import winsound
+try:
+    import winsound  # Só existe no Windows
+except ImportError:
+    winsound = None
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -29,7 +32,11 @@ def criar_pasta_se_nao_existir(caminho):
         os.makedirs(caminho)
 
 def tocar_alerta():
-    winsound.Beep(ALERTA_SONORO_FREQ, ALERTA_SONORO_DUR)
+    if winsound:
+        winsound.Beep(ALERTA_SONORO_FREQ, ALERTA_SONORO_DUR)
+    else:
+        # Fora do Windows: bip do terminal
+        print('\a', end='', flush=True)
 
 def tratar_captcha(driver):
     """
@@ -297,20 +304,24 @@ def iniciar_coleta():
         logger(f"Erro ao abrir o Chrome: {e}", arquivo_log)
         return
 
+    # ids_coletados guarda tanto o ID de 16 dígitos quanto o ID curto da listagem
+    # (abreDetalhe('K...')), para a retomada reconhecer perfis já baixados.
+    # perfis_salvos conta só os de 16 dígitos (um por perfil).
     ids_coletados = set()
-    
+    perfis_salvos = set()
+
     # Se o arquivo já existir, carregar IDs para evitar duplicatas
+    # Formato da linha: "N:ID16:IDCURTO" (atual) ou "N:ID16" / "ID16" (antigo)
     if os.path.exists(arquivo_list):
         with open(arquivo_list, 'r', encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
                 if not line: continue
                 part = line.split(':')
-                if len(part) > 1:
-                    ids_coletados.add(part[1])
-                else:
-                    ids_coletados.add(line)
-        logger(f"Retomando de onde parou. {len(ids_coletados)} IDs já conhecidos.", arquivo_log)
+                ids_linha = part[1:] if len(part) > 1 else [line]
+                ids_coletados.update(i for i in ids_linha if i)
+                perfis_salvos.add(ids_linha[0])
+        logger(f"Retomando de onde parou. {len(perfis_salvos)} perfis já conhecidos.", arquivo_log)
 
     pagina_atual = 1
     perfil_numero = 0
@@ -492,11 +503,13 @@ def iniciar_coleta():
                     with open(caminho_arquivo, "w", encoding='utf-8') as f_html:
                         f_html.write(html_cv)
                     
-                    # Adiciona à lista de coletados
-                    if id_para_salvar not in ids_coletados:
-                        ids_coletados.add(id_para_salvar)
+                    # Adiciona à lista de coletados, guardando também o ID curto da listagem
+                    if id_para_salvar not in perfis_salvos:
+                        perfis_salvos.add(id_para_salvar)
                         with open(arquivo_list, 'a', encoding='utf-8') as f:
-                            f.write(f"{len(ids_coletados)}:{id_para_salvar}\n")
+                            f.write(f"{len(perfis_salvos)}:{id_para_salvar}:{id_lattes}\n")
+                    ids_coletados.add(id_para_salvar)
+                    ids_coletados.add(id_lattes)
                     
                     logger(f"Perfil {perfil_numero} extraído com sucesso: {id_para_salvar}.html", arquivo_log)
                     
@@ -574,7 +587,7 @@ def iniciar_coleta():
                 f.write(gerar_config(nome_grupo, arquivo_list))
             
             logger("\n--- RESUMO DA COLETA ---", arquivo_log)
-            logger(f"- Total de IDs coletados: {len(ids_coletados)}", arquivo_log)
+            logger(f"- Total de perfis coletados: {len(perfis_salvos)}", arquivo_log)
             logger(f"- Arquivo de lista: {arquivo_list}", arquivo_log)
             logger(f"- Arquivo de configuração: {arquivo_config}", arquivo_log)
             logger(f"- Arquivo de log: {arquivo_log}", arquivo_log)
