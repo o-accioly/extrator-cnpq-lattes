@@ -27,6 +27,31 @@ CONTROL_CHARS_PATTERN = re.compile(
 WHITESPACE_PATTERN = re.compile(r'\s+')
 COLUMN_CLEANUP_PATTERN = re.compile(r'[^\w\s\(\):-]')
 
+# Opções do ftfy usadas em todo o extrator. NFC (e não NFKC) para não alterar dados:
+# NFKC troca 'º'/'ª' por 'o'/'a', '²' por '2', etc.
+FTFY_OPCOES = dict(
+    normalization='NFC',
+    uncurl_quotes=True,
+    fix_entities=True,
+    remove_terminal_escapes=True,
+    fix_encoding=True,
+    fix_latin_ligatures=True,
+    fix_character_width=True,
+)
+
+# Palavras-chave contadas em cada currículo. Comparação sem acento e em minúsculas.
+# Termos longos casam como trecho (pega plurais: "canabinoides"); siglas curtas só como
+# palavra inteira, para "cbd"/"thc" não casarem no meio de outras palavras.
+PALAVRAS_CHAVE = [
+    'cannabis', 'cannabidiol', 'canabidiol', 'canhamo', 'canabinologia',
+    'tetrahidrocanabinol', 'canabinoide', 'cannabinoid', 'cbd', 'thc',
+]
+SIGLAS_PALAVRA_INTEIRA = {'cbd', 'thc'}
+PADROES_PALAVRAS_CHAVE = {
+    pc: re.compile(rf'\b{re.escape(pc)}\b' if pc in SIGLAS_PALAVRA_INTEIRA else re.escape(pc))
+    for pc in PALAVRAS_CHAVE
+}
+
 def remover_acentos(txt):
     if not txt:
         return ""
@@ -42,19 +67,7 @@ def reparar_mojibake(txt):
     if not isinstance(txt, str) or not txt:
         return txt
 
-    # ftfy.fix_text() com configurações agressivas para mojibake múltiplo
-    # normalization='NFKC' força normalização forte
-    # max_decode_length aumentado para textos muito corrompidos
-    return ftfy.fix_text(
-        txt,
-        normalization='NFKC',
-        uncurl_quotes=True,
-        fix_entities=True,
-        remove_terminal_escapes=True,
-        fix_encoding=True,
-        fix_latin_ligatures=True,
-        fix_character_width=True
-    )
+    return ftfy.fix_text(txt, **FTFY_OPCOES)
 
 def limpar_caracteres_invalidos(txt):
     """Remove caracteres de controle e NULL bytes que quebram o Excel (XML)."""
@@ -62,16 +75,7 @@ def limpar_caracteres_invalidos(txt):
         return txt
 
     # 1. Repara encoding corrompido (Mojibake) com ftfy agressivo
-    txt = ftfy.fix_text(
-        txt,
-        normalization='NFKC',
-        uncurl_quotes=True,
-        fix_entities=True,
-        remove_terminal_escapes=True,
-        fix_encoding=True,
-        fix_latin_ligatures=True,
-        fix_character_width=True
-    )
+    txt = ftfy.fix_text(txt, **FTFY_OPCOES)
 
     # 2. Normaliza quebras de linha para o padrão que o Excel prefere (\n)
     txt = txt.replace('\r\n', '\n').replace('\r', '\n')
@@ -265,11 +269,14 @@ def extrair_dados_lattes(soup, html_content, file_id):
             titulo = WHITESPACE_PATTERN.sub(' ', titulo).strip()
                 
             items = []
+            capturados = []  # elementos já lidos aqui, removidos do soup depois
             curr = div.find_next_sibling()
             while curr:
                 classes = curr.get('class', []) if curr.name == 'div' else []
                 if 'cita-artigos' in classes or 'inst_back' in classes or 'title-wrapper' in classes:
                     break
+                if 'artigo-completo' in classes or (curr.name == 'div' and 'layout-cell-11' in classes):
+                    capturados.append(curr)
                 if 'artigo-completo' in classes:
                     # Artigos em periódicos vêm em <div class="artigo-completo">, com o texto
                     # dentro de um layout-cell-11 que não é irmão direto do cabeçalho.
@@ -293,6 +300,12 @@ def extrair_dados_lattes(soup, html_content, file_id):
                         if it not in secoes_encontradas[titulo]: secoes_encontradas[titulo].append(it)
                 else:
                     secoes_encontradas[titulo] = items
+                # Remove do soup o que já virou coluna aqui. Sem isso, a seção-mãe
+                # ("Produções", "Bancas", "Orientações"...) lida no passo B repetia
+                # todo o conteúdo das subseções numa coluna gigante, cortada no Excel.
+                for elem in capturados:
+                    elem.decompose()
+                div.decompose()
 
         # B. Extração via 'title-wrapper'
         wrappers = soup.find_all('div', class_='title-wrapper')
@@ -344,6 +357,14 @@ def extrair_dados_lattes(soup, html_content, file_id):
         contagens = {k: len(v) for k, v in secoes_encontradas.items()}
         return textos, contagens
 
+    # Texto visível para a contagem de palavras-chave. Calculado aqui porque a extração
+    # dinâmica remove elementos do soup. Ignora script/style, atributos e marcação,
+    # que antes inflavam a contagem.
+    texto_visivel = ' '.join(
+        s for s in soup.find_all(string=True)
+        if s.parent is not None and s.parent.name not in ('script', 'style', 'noscript', 'head', 'title')
+    )
+
     # Executa extração dinâmica
     dados['Atuação Profissional'] = extrair_atuacao_profissional()
     secoes_dinamicas, contagem_itens = extrair_secoes_dinamicas()
@@ -363,27 +384,21 @@ def extrair_dados_lattes(soup, html_content, file_id):
     dados['Produção Bibliográfica (Total)'] = total_prod
 
     # 4. ESTÁGIO DE PALAVRAS-CHAVE (Sempre por último)
-    palavras_chave = ['cannabis', 'cannabidiol', 'canhamo', 'canabinologia', 'tetrahidrocanabinol', 'canabinoide']
-
     # Normaliza o conteúdo UMA VEZ para todas as palavras-chave (otimização crítica)
-    content_normalizado = remover_acentos(html_content).lower()
+    content_normalizado = remover_acentos(texto_visivel).lower()
 
-    # Pré-compila as palavras-chave normalizadas
-    palavras_normalizadas = {pc: remover_acentos(pc).lower() for pc in palavras_chave}
+    # Colunas de texto já extraídas, normalizadas uma vez (sem as colunas de palavras-chave)
+    colunas_normalizadas = {
+        col: remover_acentos(valor).lower()
+        for col, valor in dados.items()
+        if col not in ('ID Lattes', 'Nome') and isinstance(valor, str)
+    }
 
-    for pc in palavras_chave:
-        pc_normalizada = palavras_normalizadas[pc]
-
-        # Contagem global (usando count() é mais rápido que findall())
-        contagem = content_normalizado.count(pc_normalizada)
+    for pc, padrao in PADROES_PALAVRAS_CHAVE.items():
+        contagem = len(padrao.findall(content_normalizado))
 
         # Ocorrências em colunas
-        colunas_encontradas = []
-        for col, valor in dados.items():
-            if col in ['ID Lattes', 'Nome'] or not isinstance(valor, str):
-                continue
-            if pc_normalizada in remover_acentos(valor).lower():
-                colunas_encontradas.append(col)
+        colunas_encontradas = [col for col, valor in colunas_normalizadas.items() if padrao.search(valor)]
 
         dados[f'Contagem: {pc}'] = contagem
         dados[f'Ocorrências (Colunas): {pc}'] = ' ; '.join(colunas_encontradas)
@@ -437,11 +452,14 @@ def processar_um_arquivo(arquivo, pasta_htmls):
             elif detected_encoding in ['windows-1252', 'cp1252']:
                 detected_encoding = 'windows-1252'
 
-        # Lista de encodings para tentar, priorizando o detectado
-        encodings_to_try = []
+        # Lista de encodings para tentar. UTF-8 vem primeiro porque é estrito: só decodifica
+        # se os bytes forem UTF-8 válidos. O coletor salva em UTF-8, mas a página do Lattes
+        # declara ISO-8859-1 no <meta>; confiar no <meta> gerava mojibake em todo arquivo.
+        # Latin-1 aceita qualquer byte, então precisa ficar por último.
+        encodings_to_try = ['utf-8']
         if detected_encoding:
             encodings_to_try.append(detected_encoding)
-        encodings_to_try.extend(['iso-8859-1', 'windows-1252', 'utf-8', 'latin-1'])
+        encodings_to_try.extend(['windows-1252', 'iso-8859-1'])
 
         # Remove duplicatas mantendo ordem
         seen = set()
@@ -464,16 +482,7 @@ def processar_um_arquivo(arquivo, pasta_htmls):
     try:
         # Repara mojibake UMA VEZ no conteúdo inteiro ANTES de processar
         # Usa configurações agressivas para corrigir múltiplas camadas de corrupção
-        content = ftfy.fix_text(
-            content,
-            normalization='NFKC',
-            uncurl_quotes=True,
-            fix_entities=True,
-            remove_terminal_escapes=True,
-            fix_encoding=True,
-            fix_latin_ligatures=True,
-            fix_character_width=True
-        )
+        content = ftfy.fix_text(content, **FTFY_OPCOES)
 
         # Parse HTML UMA VEZ e reutiliza o soup (otimização crítica)
         soup = BeautifulSoup(content, 'lxml')
@@ -536,10 +545,11 @@ def main():
     lotes = [arquivos[i:i + chunk_size] for i in range(0, len(arquivos), chunk_size)]
 
     with ProcessPoolExecutor(max_workers=num_cpus) as executor:
-        futures = [executor.submit(processar_lote_arquivos, lote, pasta_htmls) for lote in lotes]
-        
+        futures = {executor.submit(processar_lote_arquivos, lote, pasta_htmls): lote for lote in lotes}
+
         with tqdm(total=len(arquivos), desc="Processando", unit="arquivo", dynamic_ncols=True) as pbar:
             for future in as_completed(futures):
+                lote = futures[future]
                 try:
                     lote_resultados, lote_erros = future.result()
                     
@@ -553,10 +563,11 @@ def main():
                         tqdm.write(info)
                         pbar.update(1)
                 except Exception as e:
-                    tqdm.write(f"Erro ao processar lote: {e}")
-                    # Se o lote falhou inteiramente, tentamos estimar quantos arquivos foram perdidos
-                    # mas como não sabemos o tamanho exato do lote aqui facilmente sem lógica extra,
-                    # apenas reportamos o erro. No entanto, o chunk_size é conhecido.
+                    # O lote falhou inteiro (ex.: processo do worker morreu): todos os arquivos
+                    # dele entram como erro, para não sumirem do relatório final.
+                    tqdm.write(f"Erro ao processar lote de {len(lote)} arquivos: {e}")
+                    arquivos_com_erro.extend(lote)
+                    pbar.update(len(lote))
 
     # Resumo final no terminal
     total_lidos = len(arquivos)
@@ -615,8 +626,21 @@ def main():
                 # Agora só precisamos remover caracteres de controle inválidos no XML
                 df[col] = df[col].apply(lambda x: CONTROL_CHARS_PATTERN.sub('', x.replace('\r\n', '\n').replace('\r', '\n')))
 
-                # 3. Trunca e limpa espaços em uma única operação (otimização)
-                df[col] = df[col].apply(lambda x: x[:limite_excel].strip() if len(x) > limite_excel else x.strip())
+                # 3. Limpa espaços nas pontas
+                df[col] = df[col].str.strip()
+
+        # O corte no limite de caracteres por célula vale só para o Excel. O TSV sai completo.
+        aviso_truncado = ' [TRUNCADO: texto completo no .txt]'
+        limite_corte = limite_excel - len(aviso_truncado)
+        df_excel = df.copy()
+        celulas_truncadas = []
+        for col in df_excel.columns:
+            if pd.api.types.is_numeric_dtype(df_excel[col]):
+                continue
+            longas = df_excel[col].str.len() > limite_excel
+            if longas.any():
+                celulas_truncadas.append((col, int(longas.sum())))
+                df_excel.loc[longas, col] = df_excel.loc[longas, col].str[:limite_corte] + aviso_truncado
 
         # Gera o nome do arquivo com data, hora e número de arquivos
         data_hora = datetime.now().strftime('%d-%m-%Y %H-%M-%S')
@@ -629,11 +653,17 @@ def main():
             # Tenta usar xlsxwriter se disponível, senão usa openpyxl
             try:
                 import xlsxwriter
-                df.to_excel(output_xlsx, index=False, engine='xlsxwriter')
+                df_excel.to_excel(output_xlsx, index=False, engine='xlsxwriter')
                 print(f"\nSucesso! Arquivo Excel gerado (xlsxwriter): {output_xlsx}")
             except (ImportError, Exception):
-                df.to_excel(output_xlsx, index=False, engine='openpyxl')
+                df_excel.to_excel(output_xlsx, index=False, engine='openpyxl')
                 print(f"\nSucesso! Arquivo Excel gerado (openpyxl): {output_xlsx}")
+            if celulas_truncadas:
+                total_cortes = sum(n for _, n in celulas_truncadas)
+                print(f"[AVISO] {total_cortes} células passaram de {limite_excel} caracteres e foram cortadas no Excel "
+                      f"(marcadas com '{aviso_truncado.strip()}'). O .txt tem o texto completo.")
+                for col, n in sorted(celulas_truncadas, key=lambda x: -x[1])[:10]:
+                    print(f"  - {col}: {n} células")
         except Exception as e:
             print(f"\nErro ao salvar Excel: {e}")
 
