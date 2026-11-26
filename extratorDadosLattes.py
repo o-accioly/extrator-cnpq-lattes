@@ -270,7 +270,17 @@ def extrair_dados_lattes(soup, html_content, file_id):
                 classes = curr.get('class', []) if curr.name == 'div' else []
                 if 'cita-artigos' in classes or 'inst_back' in classes or 'title-wrapper' in classes:
                     break
-                if curr.name == 'div' and 'layout-cell-11' in classes:
+                if 'artigo-completo' in classes:
+                    # Artigos em periódicos vêm em <div class="artigo-completo">, com o texto
+                    # dentro de um layout-cell-11 que não é irmão direto do cabeçalho.
+                    cell = curr.find('div', class_='layout-cell-11')
+                    if cell:
+                        # Remove spans ocultos de ordenação (autor/ano duplicados) e o bloco de citações
+                        for oculto in cell.select('span.informacao-artigo, span.citado'):
+                            oculto.decompose()
+                        text = WHITESPACE_PATTERN.sub(' ', cell.get_text(separator=' ', strip=True))
+                        if text and text not in items: items.append(text)
+                elif curr.name == 'div' and 'layout-cell-11' in classes:
                     text = curr.get_text(separator=' ', strip=True)
                     if text:
                         text = WHITESPACE_PATTERN.sub(' ', text)
@@ -328,11 +338,15 @@ def extrair_dados_lattes(soup, html_content, file_id):
                 else:
                     secoes_encontradas[titulo] = final_items
         
-        return {k: ' ; '.join(v) for k, v in secoes_encontradas.items()}
+        # Retorna também a quantidade de itens por seção: contar pelo texto unido não funciona,
+        # porque o próprio separador ' ; ' aparece entre os autores de cada citação.
+        textos = {k: ' ; '.join(v) for k, v in secoes_encontradas.items()}
+        contagens = {k: len(v) for k, v in secoes_encontradas.items()}
+        return textos, contagens
 
     # Executa extração dinâmica
     dados['Atuação Profissional'] = extrair_atuacao_profissional()
-    secoes_dinamicas = extrair_secoes_dinamicas()
+    secoes_dinamicas, contagem_itens = extrair_secoes_dinamicas()
     dados.update(secoes_dinamicas)
 
     # 3. ESTÁGIO DE CÁLCULOS TOTAIS
@@ -345,8 +359,7 @@ def extrair_dados_lattes(soup, html_content, file_id):
     ]
     total_prod = 0
     for k in chaves_producao:
-        if k in dados and dados[k]:
-            total_prod += len(dados[k].split(' ; '))
+        total_prod += contagem_itens.get(k, 0)
     dados['Produção Bibliográfica (Total)'] = total_prod
 
     # 4. ESTÁGIO DE PALAVRAS-CHAVE (Sempre por último)

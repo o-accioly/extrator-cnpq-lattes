@@ -5,15 +5,19 @@ import time
 # Tenta importar as funções dos scripts existentes
 try:
     from coletorLattes import iniciar_coleta
-except ImportError:
+except ImportError as e:
+    _erro_coletor = e
     def iniciar_coleta():
-        print("Erro: Não foi possível carregar o coletorLattes.py")
+        print(f"Erro: Não foi possível carregar o coletorLattes.py: {_erro_coletor}")
+        print("Instale as dependências com: pip install -r requirements.txt")
 
 try:
     from extratorDadosLattes import main as iniciar_extracao
-except ImportError:
+except ImportError as e:
+    _erro_extrator = e
     def iniciar_extracao():
-        print("Erro: Não foi possível carregar o extratorDadosLattes.py")
+        print(f"Erro: Não foi possível carregar o extratorDadosLattes.py: {_erro_extrator}")
+        print("Instale as dependências com: pip install -r requirements.txt")
 
 def limpar_tela():
     if os.name == 'nt':
