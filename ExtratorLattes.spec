@@ -5,6 +5,8 @@
 import os
 import sys
 
+from PyInstaller.utils.hooks import collect_submodules
+
 ONEFILE = os.environ.get("ONEFILE") == "1"
 icone = "lattes_extrator/data/icone.ico" if sys.platform.startswith("win") else "lattes_extrator/data/icone.png"
 
@@ -13,7 +15,12 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[("lattes_extrator/data", "lattes_extrator/data")],
-    hiddenimports=["lattes_extrator.gui.app", "PySide6.QtWebEngineWidgets", "PySide6.QtWebEngineCore"],
+    # selenium e rapidfuzz carregam partes por importlib (ChromeOptions, motor compilado do
+    # RapidFuzz): a análise estática não enxerga. `--cli diagnostico` confere no executável.
+    hiddenimports=["PySide6.QtWebEngineWidgets", "PySide6.QtWebEngineCore"]
+    + collect_submodules("lattes_extrator")
+    + collect_submodules("selenium")
+    + collect_submodules("rapidfuzz", filter=lambda m: "__pyinstaller" not in m),
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -36,10 +43,18 @@ QT_NECESSARIOS = {
     "WebEngineWidgets", "XcbQpa", "WaylandClient", "WlShellIntegration", "EglFSDeviceIntegration", "EglFsKmsSupport",
 }
 IDIOMAS = ("pt_BR", "pt-BR", "en-US", "en_US", "pt.")
+# O selenium traz o Selenium Manager das quatro plataformas; só o desta fica (~16 MB a menos).
+import platform as _platform
+
+SELENIUM_MANAGER = ("windows" if sys.platform.startswith("win") else "macos" if sys.platform == "darwin"
+                    else "linux-arm64" if _platform.machine().lower() in ("aarch64", "arm64") else "linux-x86_64")
 
 
 def _manter(destino: str) -> bool:
     d = destino.replace("\\", "/")
+    sm = _re.search(r"selenium/webdriver/common/([^/]+)/selenium-manager", d)
+    if sm:
+        return sm.group(1) == SELENIUM_MANAGER
     m = _re.search(r"(?:^|/)(?:lib)?Qt6([A-Za-z0-9]+)\.(?:so|dll|dylib)", d)
     if m and "/plugins/" not in d:
         return m.group(1) in QT_NECESSARIOS
