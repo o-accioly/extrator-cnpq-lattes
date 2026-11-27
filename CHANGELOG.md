@@ -4,6 +4,22 @@ Todas as mudanças relevantes do Extrator CNPq Lattes. Gerado pelo towncrier a p
 
 <!-- towncrier release notes start -->
 
+## [2.1.0] — 2026-11-27
+### Funcionalidades
+
+- O Windows ganha um instalador (`ExtratorLattes-<versão>-setup.exe`): um arquivo só, que instala sem pedir administrador, cria atalho no Menu Iniciar (e, se quiser, na Área de Trabalho) e tem desinstalador. O `.zip` continua disponível.
+- O programa verifica o ambiente ao abrir (Chrome, pasta de trabalho, acesso ao CNPq e as próprias bibliotecas), mostra o que falta e não deixa começar uma extração que não ia funcionar.
+
+### Melhorias
+
+- No Windows, a coleta não abre mais uma janela preta de console junto com o Chrome, e o perfil do Chrome fica fora da pasta de trabalho para não ir para o OneDrive.
+
+### Correções
+
+- O programa abre mesmo quando a pasta de trabalho sumiu ou as configurações salvas estão corrompidas, voltando aos valores padrão e avisando.
+- A busca por nomes e a coleta voltam a funcionar no executável do Windows, que saía sem uma parte da automação do Chrome.
+- No executável, o desempate de homônimos volta a usar a comparação de nomes rápida e precisa, em vez da simplificada.
+
 ## [2.0.1] — 2026-11-27
 ### Documentação
 
