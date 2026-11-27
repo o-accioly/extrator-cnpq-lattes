@@ -24,11 +24,27 @@ def pasta_dados_usuario() -> Path:
     return base / "ExtratorLattes"
 
 
+def pasta_local_usuario() -> Path:
+    """Dados locais que não devem ir para a nuvem (Windows: %LOCALAPPDATA%, fora do roaming)."""
+    if sys.platform.startswith("win"):
+        return Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / "ExtratorLattes"
+    return pasta_dados_usuario()
+
+
 def pasta_trabalho_padrao() -> Path:
     docs = Path.home() / "Documents"
     if not docs.exists():
         docs = Path.home() / "Documentos" if (Path.home() / "Documentos").exists() else Path.home()
     return docs / "Extrator Lattes"
+
+
+# Faixas aceitas ao carregar o config.json (valor fora vira o limite mais próximo)
+LIMITES: dict[str, tuple[float, float]] = {
+    "atraso_entre_curriculos": (1, 120), "atraso_entre_buscas": (0.5, 60), "timeout_pagina": (10, 300),
+    "espera_bloqueio": (30, 3600), "processos": (0, 64), "nota_minima": (0.1, 1.0),
+    "margem_desempate": (0.0, 0.8), "max_candidatos_cv": (0, 20), "similaridade_nome": (50, 100),
+}
+POR_PAGINA = (10, 20, 50, 100)
 
 
 @dataclass
@@ -79,7 +95,11 @@ class Config:
 
     @property
     def perfil_chrome(self) -> Path:
-        return self.raiz / ".chrome-perfil"
+        """Perfil do Chrome usado na coleta. Fica nos dados locais do usuário: dentro da pasta de
+        trabalho ele ia junto para o OneDrive/Dropbox (centenas de MB e arquivos travados).
+        Quem já tinha o perfil na pasta de trabalho continua usando o mesmo."""
+        antigo = self.raiz / ".chrome-perfil"
+        return antigo if antigo.is_dir() else pasta_local_usuario() / "chrome-perfil"
 
     def num_processos(self) -> int:
         return self.processos if self.processos > 0 else max(1, (os.cpu_count() or 2) - 1)
@@ -87,6 +107,20 @@ class Config:
     def garantir_pastas(self) -> None:
         for p in (self.raiz, self.pasta_htmls, self.pasta_planilhas):
             p.mkdir(parents=True, exist_ok=True)
+
+    def garantir_pastas_ou_padrao(self) -> str:
+        """Como ``garantir_pastas``, mas se a pasta configurada não der para usar (pen drive
+        removido, rede fora, sem permissão) volta para a padrão em vez de impedir o programa
+        de abrir. Devolve o aviso para mostrar à pessoa ("" se deu tudo certo)."""
+        try:
+            self.garantir_pastas()
+            return ""
+        except OSError as e:
+            anterior = self.pasta_trabalho
+            self.pasta_trabalho = str(pasta_trabalho_padrao())
+            self.garantir_pastas()
+            return (f"A pasta de trabalho {anterior} não está acessível ({e.strerror or e}). "
+                    f"Usando {self.pasta_trabalho} nesta sessão; ajuste em Configurações.")
 
     # --- persistência ---
     @staticmethod
@@ -100,10 +134,12 @@ class Config:
             dados = json.loads(cls.arquivo().read_text(encoding="utf-8"))
         except (OSError, ValueError):
             return cfg
-        validos = {f.name for f in fields(cls)}
+        if not isinstance(dados, dict):
+            return cfg
+        padrao = {f.name: getattr(cfg, f.name) for f in fields(cls)}
         for k, v in dados.items():
-            if k in validos:
-                setattr(cfg, k, v)
+            if k in padrao:
+                setattr(cfg, k, _validar(k, v, padrao[k]))
         return cfg
 
     def salvar(self) -> None:
@@ -112,3 +148,30 @@ class Config:
         tmp = arq.with_suffix(".tmp")
         tmp.write_text(json.dumps(asdict(self), ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.replace(arq)
+
+
+def _validar(chave: str, valor, padrao):
+    """Converte para o tipo do padrão e prende na faixa aceita; valor inválido vira o padrão
+    (um config.json editado à mão ou de versão antiga não pode derrubar o programa)."""
+    try:
+        if isinstance(padrao, bool):
+            if not isinstance(valor, bool):
+                return padrao
+        elif isinstance(padrao, (int, float)):
+            if isinstance(valor, bool) or not isinstance(valor, (int, float, str)):
+                return padrao
+            valor = type(padrao)(float(valor))
+            if chave in LIMITES:
+                lo, hi = LIMITES[chave]
+                valor = type(padrao)(min(max(valor, lo), hi))
+            if chave == "resultados_por_pagina" and valor not in POR_PAGINA:
+                return padrao
+        elif isinstance(padrao, list):
+            if not isinstance(valor, list):
+                return padrao
+            valor = [str(x).strip() for x in valor if str(x).strip()]
+        elif isinstance(padrao, str):
+            valor = str(valor).strip() or padrao
+    except (TypeError, ValueError):
+        return padrao
+    return valor
