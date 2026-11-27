@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Um slot de CI do Extrator CNPq Lattes (adaptado do runner do outro projeto/outro projeto): registra um
+# Um slot de CI do Extrator CNPq Lattes: registra um
 # runner just-in-time (um job só; depois o GitHub o remove), roda esse job como `runner` e recomeça.
 # Roda como root só para ler o token e preparar as pastas; o job nunca vê o token (o
 # /proc/1/environ do root não é legível por `runner`, e `runner` não tem sudo).
 #
-# Ambiente (definido no compose do painel de deploy, nunca no repositório):
+# Ambiente (definido no deploy do compose, nunca no repositório):
 #   GITHUB_REPOSITORY   dono/nome
 #   GITHUB_RUNNER_PAT   token fine-grained, só este repositório, "Administration: read and write"
 #   RUNNER_SLOT         1..N — entra no nome do runner e na pasta de trabalho
@@ -40,15 +40,8 @@ job_env=(
   RUNNER_MANUALLY_TRAP_SIG=1
   ACTIONS_RUNNER_PRINT_LOG_TO_STDOUT=1
   RUNNER_SLOT="$RUNNER_SLOT"
-  # Caches entre jobs (pip Linux e pip do Python Windows no Wine)
+  # Cache do pip entre jobs
   PIP_CACHE_DIR="$CACHE_ROOT/pip"
-  PIP_CACHE_DIR_WIN="Z:${CACHE_ROOT//\//\\}\\pip-win"
-  # Wine e o Python Windows que gera o .exe (ver Dockerfile)
-  WINEPREFIX="${WINEPREFIX:-/opt/wineprefix}"
-  WINEARCH=win64
-  WINEDEBUG=-all
-  "WINEDLLOVERRIDES=mscoree,mshtml="
-  PYTHON_WIN="${PYTHON_WIN:-/opt/winpython/python.exe}"
   # Qt sem tela (testes e capturas)
   QT_QPA_PLATFORM=offscreen
   "QTWEBENGINE_CHROMIUM_FLAGS=--disable-gpu --no-sandbox"

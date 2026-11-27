@@ -17,6 +17,7 @@ from lattes_extrator.planilhas import gerar_template, ler_planilha_nomes
 from lattes_extrator.processamento import processar
 from lattes_extrator.texto import decodificar_html, normalizar
 
+# Currículo FICTÍCIO (tools/gerar_curriculo_ficticio.py): estrutura igual à do CNPq, dados inventados.
 FIXTURE = Path(__file__).parent / "fixtures" / "1234567890123456.html"
 
 
@@ -56,33 +57,36 @@ def test_identificacao(cv):
     assert c["ID Lattes"] == "1234567890123456"
     assert c["Código CNPq"] == "K0000000A1"
     assert c["Nome"] == "Ana Beatriz Exemplo Vasconcelos"
-    assert c["ORCID"] == "https://orcid.org/0000-0003-0723-2587"
-    assert c["Última atualização"] == "15/01/2026"
+    assert c["ORCID"] == "https://orcid.org/0000-0002-1825-0097"
+    assert c["Última atualização"] == "10/10/2026"
     assert c["Bolsa de produtividade"].startswith("Bolsista de Produtividade")
 
 
 def test_formacao_e_atuacao(cv):
     c = cv.campos
     assert (c["Maior titulação"], c["Ano da maior titulação"]) == ("Doutorado", "1992")
-    assert c["Instituição da maior titulação"].startswith("Universite Exemple")
-    assert c["Instituição atual"].startswith("Universidade Federal de Pernambuco")
+    assert c["Instituição da maior titulação"].startswith("Université de Exemple")
+    # vários vínculos "Atual": vale o de servidor/professor, não o de colaboradora
+    assert c["Instituição atual"].startswith("Universidade Federal de Exemplo")
 
 
 def test_artigos_e_totais(cv):
     """Regressão: os artigos em periódicos (div.artigo-completo) se perdiam."""
     c = cv.campos
-    assert c["Qtd. artigos em periódicos"] == 290
-    assert cv.contagens["Artigos completos publicados em periódicos"] == 290
-    # 290 artigos + 7 livros + 42 capítulos + 18 trabalhos completos
-    assert c["Produção bibliográfica (total)"] == 357
+    assert c["Qtd. artigos em periódicos"] == 120
+    assert cv.contagens["Artigos completos publicados em periódicos"] == 120
+    # 120 artigos + 6 livros + 30 capítulos + 15 trabalhos completos
+    assert c["Produção bibliográfica (total)"] == 171
     artigos = cv.secoes["Artigos completos publicados em periódicos"]
-    assert artigos.startswith("SAMPAIO, PEDRITA A. ; PEREIRA")   # sem os spans ocultos de ordenação
+    assert "VASCONCELOS, A. B. E." in artigos
+    assert not artigos.startswith("VASCONCELOS, A. B. E.2025")   # sem os spans ocultos de ordenação
     assert "Citações:" not in artigos
 
 
 def test_metricas(cv):
-    assert cv.campos["Web of Science: citações"] == 1966
-    assert cv.campos["Web of Science: fator H"] == 25
+    assert cv.campos["Web of Science: citações"] == 1234
+    assert cv.campos["Web of Science: fator H"] == 18
+    assert cv.campos["Qtd. orientações concluídas"] == 60 and cv.campos["Qtd. orientações em andamento"] == 9
 
 
 def test_secoes_mae_nao_duplicam(cv):
@@ -98,8 +102,8 @@ def test_nfc_preserva_ordinal(cv):
 
 def test_palavras_chave_texto_visivel(cv):
     r = aplicar_palavras_chave(cv, compilar_palavras(["cannabis", "cbd"], ["cbd"]))
-    assert r["Contagem: cannabis"] == 15
-    assert r["Contagem: cbd"] > 0
+    assert r["Contagem: cannabis"] > 10
+    assert r["Contagem: cbd"] == 0           # sigla: não casa dentro de outras palavras
     assert "Projetos de pesquisa" in r["Ocorrências (colunas): cannabis"]
 
 
@@ -111,7 +115,7 @@ def test_extrair_id16():
 def test_parse_listagem():
     html = """<div class="tit_form">Resultados de 1 - 2 dos 2.392 encontrados</div>
     <div class="resultado"><ol><li><b><a href="javascript:abreDetalhe('K0000000A1','x',1,)">Ana Beatriz Exemplo Vasconcelos</a></b>
-    Doutorado pelo Universite Exemple - I, França(1992)</li>
+    Doutorado pelo Université de Exemple, França(1992)</li>
     <li><b><a href="javascript:abreDetalhe('K0000000B2','x',1,)">Maria Silva</a></b></li></ol></div>"""
     total, cands = parse_listagem(html)
     assert total == 2392
@@ -155,8 +159,8 @@ def test_identificar_coluna():
 
 def test_avaliar_completo(cv):
     linha = cv.como_linha()
-    bom = avaliar({"Instituição onde trabalha": "UFPE", "Formação (nível)": "Doutorado",
-                   "UF / cidade de atuação": "Pernambuco"}, linha, "")
+    bom = avaliar({"Instituição onde trabalha": "UFEX", "Formação (nível)": "Doutorado",
+                   "UF / cidade de atuação": "PE"}, linha, "")
     ruim = avaliar({"Instituição onde trabalha": "Universidade de São Paulo", "Ano de formação": "2015"}, linha, "")
     assert bom.nota > 0.9 and ruim.nota < 0.5
 

@@ -1,6 +1,8 @@
 # Changelog
 
-Todas as mudanças relevantes do Extrator CNPq Lattes. Gerado automaticamente a partir dos commits.
+Todas as mudanças relevantes do Extrator CNPq Lattes. Gerado pelo towncrier a partir de `changelog.d/` em cada release (não editar à mão).
+
+<!-- towncrier release notes start -->
 
 ## [2.0.0] - 27/11/2026
 

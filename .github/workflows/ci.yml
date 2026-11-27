@@ -1,17 +1,20 @@
 # CI do Extrator CNPq Lattes: testes, executáveis Windows (.exe) e Linux, changelog e release.
 #
-# Em todo push/PR: testes + os dois executáveis (artefatos do workflow por 7 dias).
-# Em push na main com commits "feat"/"fix"/"perf" (ou "!"): a versão sobe sozinha (git-cliff, ver
-# cliff.toml), o CHANGELOG.md é atualizado, a tag vX.Y.Z é criada e sai uma Release com os executáveis.
+# Fluxo: branches de trabalho -> PR para `homolog` -> PR `homolog` -> `main`.
+#   - PR e push em homolog/main: fragmento towncrier (em PR), testes e os dois executáveis
+#     (artefatos do workflow por 7 dias);
+#   - push na `main` com fragmentos pendentes em changelog.d/: a versão sobe sozinha
+#     (removal = major, feature = minor, demais = patch), o towncrier escreve o CHANGELOG.md,
+#     sai a tag vX.Y.Z, a Release com os executáveis e o back-merge main -> homolog.
 #
-# Onde roda: runners do GitHub (Windows nativo para o .exe). Com a variável do repositório
-# USAR_RUNNER_PROPRIO=true, os builds vão para o runner self-hosted do servidor próprio (deploy/ci-runner,
-# label lattes-ci), e o .exe é gerado no Wine.
+# Onde roda: runners do GitHub. Com a variável do repositório USAR_RUNNER_PROPRIO=true, testes e
+# executável Linux vão para o runner self-hosted (deploy/ci-runner, label lattes-ci). O .exe fica
+# sempre num Windows do GitHub: o PySide6 atual não carrega no Wine.
 name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, homolog]
   pull_request:
   workflow_dispatch:
 
@@ -21,10 +24,6 @@ concurrency:
 
 permissions:
   contents: read
-
-env:
-  GIT_CLIFF_VERSION: "2.14.2"
-  GIT_CLIFF_SHA256: "24f397c733add5390fdceee3a2088588ab0d5f944ce00d34cb7029b888cf2db4"
 
 jobs:
   versao:
@@ -37,36 +36,43 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Instalar git-cliff
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar towncrier
+        run: pip install -q "$(grep -E '^towncrier==' requirements-dev.txt)"
+      - name: Fragmento towncrier no PR
+        if: github.event_name == 'pull_request'
         run: |
-          arq="git-cliff-${GIT_CLIFF_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
-          curl -fsSLO "https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}/${arq}"
-          echo "${GIT_CLIFF_SHA256}  ${arq}" | sha256sum -c -
-          tar xzf "$arq" && sudo install "git-cliff-${GIT_CLIFF_VERSION}/git-cliff" /usr/local/bin/git-cliff
+          base="origin/${GITHUB_BASE_REF}"
+          codigo="$(git diff --name-only "$base"...HEAD -- 'lattes_extrator/*.py' 'lattes_extrator/**/*.py' main.py || true)"
+          frag="$(git diff --name-only --diff-filter=A "$base"...HEAD -- 'changelog.d/*.md' | grep -v '_template.md' || true)"
+          if [[ -n "$codigo" && -z "$frag" && "$GITHUB_HEAD_REF" != "homolog" ]]; then
+            echo "::error::Código do programa mudou sem fragmento em changelog.d/ (ver .claude/rules/towncrier.md)."
+            echo "$codigo"
+            exit 1
+          fi
+          echo "Fragmentos: ${frag:-nenhum}"
       - name: Calcular versão
         id: v
         run: |
           atual="$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)"
-          proxima="$(git-cliff --bumped-version 2>/dev/null || true)"
-          # Só feat/fix/perf (ou mudança incompatível, "!") geram versão; docs/ci/chore sozinhos não.
-          desde="${atual:+$atual..}HEAD"
-          relevantes="$(git log "$desde" --format=%s | grep -Ec '^(feat|fix|perf)(\([^)]*\))?!?:' || true)"
+          proxima="$(python ci/versao.py "$atual")"
           liberar=false
-          if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/heads/main && -n "$proxima" \
-                && "$proxima" != "$atual" && "$relevantes" -gt 0 ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/heads/main && -n "$proxima" ]]; then
             liberar=true
+            versao="$proxima"
+          else
+            base="${atual#v}"
+            [[ -n "$base" ]] || base="$(python -c "import re;print(re.search(r'__version__ = \"(\d+\.\d+\.\d+)', open('lattes_extrator/__init__.py').read()).group(1))")"
+            versao="${base}-dev.${GITHUB_SHA::7}"
           fi
-          if [[ "$liberar" == true ]]; then versao="${proxima#v}"; else versao="${atual#v}"; versao="${versao:-0.0.0}-dev.${GITHUB_SHA::7}"; fi
           echo "versao=$versao" >> "$GITHUB_OUTPUT"
           echo "liberar=$liberar" >> "$GITHUB_OUTPUT"
-          echo "Última tag: ${atual:-nenhuma} · próxima: ${proxima:-nenhuma} · build: $versao · release: $liberar" | tee -a "$GITHUB_STEP_SUMMARY"
-          git-cliff --unreleased --tag "v${versao}" --strip all > notas.md || true
-          { echo; echo "### O que entra nesta versão"; cat notas.md; } >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: notas
-          path: notas.md
-          retention-days: 7
+          echo "Última tag: ${atual:-nenhuma} · build: $versao · release: $liberar" | tee -a "$GITHUB_STEP_SUMMARY"
+          if [[ -n "$proxima" ]]; then
+            { echo; echo "### Changelog pendente (v${proxima})"; towncrier build --draft --version "$proxima" 2>/dev/null; } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
   linux:
     name: Testes + Linux
@@ -106,7 +112,7 @@ jobs:
   windows:
     name: Windows (.exe)
     needs: versao
-    runs-on: ${{ vars.USAR_RUNNER_PROPRIO == 'true' && fromJSON('["self-hosted","lattes-ci"]') || 'windows-2022' }}
+    runs-on: windows-2022
     timeout-minutes: 75
     defaults:
       run:
@@ -114,7 +120,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        if: runner.environment == 'github-hosted'
         with:
           python-version: "3.12"
           cache: pip
@@ -138,16 +143,16 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Instalar git-cliff
-        run: |
-          arq="git-cliff-${GIT_CLIFF_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
-          curl -fsSLO "https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}/${arq}"
-          echo "${GIT_CLIFF_SHA256}  ${arq}" | sha256sum -c -
-          tar xzf "$arq" && sudo install "git-cliff-${GIT_CLIFF_VERSION}/git-cliff" /usr/local/bin/git-cliff
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar towncrier
+        run: pip install -q "$(grep -E '^towncrier==' requirements-dev.txt)"
       - uses: actions/download-artifact@v4
         with:
           path: artefatos
@@ -160,12 +165,27 @@ jobs:
           tag="v${VERSAO}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git-cliff --tag "$tag" -o CHANGELOG.md
+          towncrier build --draft --version "$VERSAO" > notas.md
+          towncrier build --version "$VERSAO" --yes
           ci/definir_versao.sh "$VERSAO"
-          git add CHANGELOG.md lattes_extrator/__init__.py
-          git commit -m "chore(release): ${tag}"
+          git add -A CHANGELOG.md changelog.d lattes_extrator/__init__.py
+          git commit -m "chore: release ${tag} [skip ci]"
           git tag -a "$tag" -m "Extrator CNPq Lattes ${tag}"
-          git push origin "HEAD:${GITHUB_REF_NAME}" "$tag"
-          gh release create "$tag" --title "Extrator CNPq Lattes ${tag}" --notes-file artefatos/notas.md \
+          git push origin "HEAD:main" "$tag"
+          gh release create "$tag" --title "Extrator CNPq Lattes ${tag}" --notes-file notas.md \
             artefatos/*.zip artefatos/*.tar.gz
           echo "Release ${tag} publicada." >> "$GITHUB_STEP_SUMMARY"
+      - name: Back-merge main -> homolog
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSAO: ${{ needs.versao.outputs.versao }}
+        run: |
+          git fetch origin homolog
+          git checkout -B homolog origin/homolog
+          if git merge --no-edit main -m "chore: back-merge v${VERSAO} [skip ci]"; then
+            git push origin homolog
+          else
+            git merge --abort
+            gh pr create --base homolog --head main --title "chore: back-merge v${VERSAO}" \
+              --body "Back-merge automático da release v${VERSAO} com conflito: resolver à mão."
+          fi

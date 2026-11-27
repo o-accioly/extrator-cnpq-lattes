@@ -1,5 +1,9 @@
 # Extrator CNPq Lattes
 
+[![CI](https://github.com/o-accioly/extrator-cnpq-lattes/actions/workflows/ci.yml/badge.svg)](https://github.com/o-accioly/extrator-cnpq-lattes/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/o-accioly/extrator-cnpq-lattes?label=vers%C3%A3o)](https://github.com/o-accioly/extrator-cnpq-lattes/releases/latest)
+[![Licença: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-green.svg)](LICENSE)
+
 Programa com interface gráfica para coletar currículos da Plataforma Lattes (CNPq), encontrar perfis a partir de uma planilha de nomes e gerar planilhas Excel prontas para análise.
 
 ![Início](docs/prints/10-inicio.png)
@@ -18,7 +22,9 @@ Durante a execução aparecem: barra de progresso, velocidade, tempo restante, e
 
 ## Instalação e uso
 
-Requer Python 3.10+ e o Google Chrome instalado.
+**Baixar pronto:** o `.exe` (Windows) e o executável Linux de cada versão estão em [Releases](https://github.com/o-accioly/extrator-cnpq-lattes/releases/latest). Só é preciso ter o Google Chrome instalado.
+
+**Rodar do código:** requer Python 3.10+ e o Google Chrome.
 
 ```bash
 python -m venv .venv
@@ -68,7 +74,7 @@ Subcomandos: `processar`, `coletar`, `nomes`, `template`, `listar`, `continuar`.
 
 ## CI (executáveis automáticos)
 
-Cada push na `main` roda os testes e gera o `ExtratorLattes.exe` (Windows) e o executável Linux no runner próprio. Uma tag `v*` publica uma Release com os dois. Detalhes, inclusive o token do runner, em [docs/ci.md](docs/ci.md).
+Todo PR roda os testes e gera o `ExtratorLattes.exe` (Windows) e o executável Linux, cada um testado. O merge em `main` publica a versão sozinho: changelog pelo towncrier, tag e Release com os executáveis. Fluxo de trabalho e detalhes em [docs/ci.md](docs/ci.md) e [CLAUDE.md](CLAUDE.md).
 
 ## Gerar o executável
 
@@ -130,3 +136,11 @@ python tools/baixar_estilo_lattes.py
 ```
 
 Ele mostra a página igual ao site quando o pacote `PySide6_WebEngine` está instalado (já incluído em `requirements.txt`). Sem esse pacote, o programa usa um modo simplificado que remonta o layout em tabelas.
+
+## Uso responsável
+
+O programa acessa dados públicos da Plataforma Lattes no ritmo de uma pessoa usando o site e não contorna as verificações do CNPq. Use os dados coletados de acordo com a LGPD e com os termos de uso da plataforma.
+
+## Licença
+
+[MIT](LICENSE). Os dados dos currículos pertencem aos pesquisadores e ao CNPq; o currículo usado nos testes (`tests/fixtures/`) é fictício.
