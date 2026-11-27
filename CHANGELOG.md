@@ -4,6 +4,11 @@ Todas as mudanças relevantes do Extrator CNPq Lattes. Gerado pelo towncrier a p
 
 <!-- towncrier release notes start -->
 
+## [2.1.1] — 2026-11-27
+### Correções
+
+- Quando o site do CNPq devolve a lista de resultados com erro do servidor, o programa tenta de novo em vez de marcar o nome como não encontrado; se o erro continuar, o nome fica como falha e é refeito ao continuar a extração.
+
 ## [2.1.0] — 2026-11-27
 ### Funcionalidades
 

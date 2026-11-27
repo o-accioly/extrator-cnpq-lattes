@@ -5,5 +5,5 @@ interface gráfica (``lattes_extrator.gui``) quanto pela linha de comando
 (``python -m lattes_extrator``).
 """
 
-__version__ = "2.1.0"
+__version__ = "2.1.1"
 NOME_APP = "Extrator CNPq Lattes"
