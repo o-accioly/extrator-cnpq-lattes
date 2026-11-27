@@ -60,4 +60,24 @@ if command -v 7z >/dev/null; then
 else
   (cd build-ci/windows/dist && zip -qr9 "$ZIP" ExtratorLattes)
 fi
+
+# Instalador (Inno Setup, já vem no runner windows-2022): um único ExtratorLattes-<versão>-setup.exe
+# que instala por usuário em %LOCALAPPDATA%\Programs\ExtratorLattes, sem administrador.
+echo "::group::Instalador (Inno Setup)"
+ISCC="$(command -v iscc || command -v ISCC || true)"
+for c in "/c/Program Files (x86)/Inno Setup 6/ISCC.exe" "/c/Program Files/Inno Setup 6/ISCC.exe"; do
+  [[ -n "$ISCC" ]] && break
+  [[ -x "$c" ]] && ISCC="$c"
+done
+[[ -n "$ISCC" ]] || { echo "::error::Inno Setup (iscc) não encontrado." >&2; exit 1; }
+# Propriedades do arquivo pedem versão numérica de 4 partes: 2.1.0-dev.abc1234 -> 2.1.0.0
+VERSAO_NUM="$(echo "$VERSAO" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+').0"
+SETUP="$SAIDA/ExtratorLattes-${VERSAO}-setup.exe"
+rm -f "$SETUP"
+# Opções com "-" (não "/"): o bash do Git converteria "/D..." em caminho.
+"$ISCC" -Q "-DVersao=$VERSAO" "-DVersaoNum=$VERSAO_NUM" \
+  "-DOrigem=$(cygpath -w "$PWD/build-ci/windows/dist/ExtratorLattes")" \
+  "-O$(cygpath -w "$SAIDA")" "$(cygpath -w "$PWD/ci/ExtratorLattes.iss")"
+test -s "$SETUP"
+echo "::endgroup::"
 ls -la "$SAIDA"
