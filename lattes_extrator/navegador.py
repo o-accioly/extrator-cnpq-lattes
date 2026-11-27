@@ -58,6 +58,15 @@ class ErroNavegador(Exception):
     pass
 
 
+class ListagemComErro(ErroNavegador):
+    """O CNPq respondeu "N encontrados" mas trocou os perfis por uma mensagem de erro do
+    servidor (ex.: ``<li>Stale file handle</li>``). É intermitente: refazer resolve."""
+
+
+# Esperas (s) entre as tentativas quando a listagem vem com erro do servidor
+ESPERAS_LISTAGEM = (3, 10, 30)
+
+
 @dataclass
 class Candidato:
     """Um resultado da listagem de busca."""
@@ -101,6 +110,15 @@ def parse_listagem(html: str) -> tuple[int, list[Candidato]]:
     if not total and cands:
         total = len(cands)
     return total, cands
+
+
+def erro_listagem(html: str) -> str:
+    """Texto dos itens da listagem que não são perfis (mensagem de erro do servidor no
+    lugar do resultado). Vazio quando a listagem está normal."""
+    doc = lxml.html.fromstring(html)
+    itens = {limpar(" ".join(li.itertext())) for li in doc.xpath('//div[contains(@class,"resultado")]//ol/li')
+             if not li.xpath(".//a[contains(@href,'abreDetalhe')]")}
+    return "; ".join(sorted(i for i in itens if i))[:200]
 
 
 def parse_preview(html: str) -> dict:
@@ -225,6 +243,32 @@ class NavegadorLattes:
     # ------------------------------------------------------------------ busca
     def buscar(self, filtros: FiltrosBusca) -> int:
         """Abre a busca, preenche o formulário e clica em Buscar. Devolve o total."""
+        return self._listagem_valida(lambda: self._buscar_uma_vez(filtros), "na busca")
+
+    def _listagem_valida(self, carregar, contexto: str) -> int:
+        """Roda ``carregar`` (busca ou troca de página) e confere a listagem. Se o CNPq disser
+        que achou perfis mas não mostrar nenhum, espera, confere de novo (pode ter sido só
+        demora) e refaz; depois de todas as tentativas levanta ``ListagemComErro``, que vira
+        falha do item, e não "não encontrado"."""
+        d = self.driver
+        for tentativa in range(len(ESPERAS_LISTAGEM) + 1):
+            total = carregar()
+            if not total or self.candidatos_da_pagina():
+                return total
+            # pode ser só a lista terminando de aparecer: confere mais uma vez antes de refazer
+            if self._esperar(lambda: bool(self.candidatos_da_pagina()), timeout=3):
+                return total
+            erro = erro_listagem(d.page_source) or "listagem sem perfis"
+            if tentativa == len(ESPERAS_LISTAGEM):
+                raise ListagemComErro(f"o site do CNPq devolveu a listagem com erro ({erro}) {contexto}, "
+                                      f"em {tentativa + 1} tentativas. Tente continuar mais tarde.")
+            espera = ESPERAS_LISTAGEM[tentativa]
+            self.rep.log(f"O site do CNPq devolveu a listagem com erro ({erro}); tentando de novo em {espera}s "
+                         f"({tentativa + 1}/{len(ESPERAS_LISTAGEM)}).", "aviso")
+            self.ctl.dormir(espera)
+        return 0  # inalcançável
+
+    def _buscar_uma_vez(self, filtros: FiltrosBusca) -> int:
         d = self.driver
         d.switch_to.window(self._aba_busca)
         d.get(URL_BUSCA)
@@ -292,9 +336,14 @@ class NavegadorLattes:
         d.switch_to.window(self._aba_busca)
         if not d.execute_script("return typeof submeterPaginacao === 'function'"):
             raise ErroNavegador("Paginação do CNPq não encontrada (o site pode ter mudado).")
-        antigo = d.find_element("css selector", ".resultado")
-        d.execute_script("submeterPaginacao(arguments[0], arguments[1])", prox, self.por_pagina)
-        self._aguardar_listagem(antigo)
+
+        def trocar() -> int:
+            antigo = d.find_element("css selector", ".resultado")
+            d.execute_script("submeterPaginacao(arguments[0], arguments[1])", prox, self.por_pagina)
+            self._aguardar_listagem(antigo)
+            return total
+
+        self._listagem_valida(trocar, f"na página a partir do resultado {prox + 1}")
         ini, _ = faixa_listagem(d.page_source)
         self.inicio_pagina = ini - 1 if ini else prox
         if ini and ini - 1 != prox:
