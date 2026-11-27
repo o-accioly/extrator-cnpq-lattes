@@ -24,3 +24,4 @@ build-ci/
 dist-ci/
 .claude/settings.local.json
 .claude/worktrees/
+ci/Output/

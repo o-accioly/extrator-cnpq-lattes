@@ -32,6 +32,7 @@ O shell não persiste entre chamadas Bash: usar os binários do venv por caminho
 .venv/bin/python main.py                                   # interface
 .venv/bin/python main.py --sem-intro                       # sem a abertura animada
 .venv/bin/python -m lattes_extrator --help                 # linha de comando
+.venv/bin/python -m lattes_extrator diagnostico            # verificação do ambiente (também roda no exe, no CI)
 QT_QPA_PLATFORM=offscreen .venv/bin/pytest -q tests        # testes
 QT_QPA_PLATFORM=offscreen .venv/bin/python tools/capturas.py /tmp/prints   # capturas de tela
 .venv/bin/pyinstaller ExtratorLattes.spec --noconfirm      # executável local
@@ -46,6 +47,7 @@ QT_QPA_PLATFORM=offscreen .venv/bin/python tools/capturas.py /tmp/prints   # cap
 - Processo longo (build, coleta real, CI): `run_in_background: true`, saída em arquivo; nunca `sleep` em foreground nem `tail` em loop.
 - Não repetir rodada que já passou: só re-rodar se um `Edit`/`Write` tocou aquele código depois da última rodada verde.
 - O QtWebEngine precisa ser importado antes do `QApplication` (`gui/app.py: preparar_webengine`).
+- Biblioteca nova ou import feito por `importlib`/lazy: incluir no `hiddenimports` do `ExtratorLattes.spec` e numa checagem de `diagnostico.py`; o CI roda `--cli diagnostico` dentro do executável.
 
 ## Economia de turnos
 

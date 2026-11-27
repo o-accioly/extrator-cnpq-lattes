@@ -108,6 +108,7 @@ QFrame[papel="card"] {{ background: {SUPERFICIE}; border: 1px solid {BORDA}; bor
 QFrame[papel="card"]:hover[clicavel="true"] {{ border: 1px solid {VERDE_ESCURO}; background: {SUPERFICIE_2}; }}
 QFrame[papel="tile"] {{ background: {SUPERFICIE}; border: 1px solid {BORDA}; border-radius: 12px; }}
 QFrame[papel="banner"] {{ background: #2A2210; border: 1px solid {AMARELO}; border-radius: 10px; }}
+QFrame[papel="banner"][nivel="erro"] {{ background: {mistura(VERMELHO, 0.10)}; border: 1px solid {VERMELHO}; }}
 QFrame[papel="linha"] {{ background: {BORDA}; max-height: 1px; min-height: 1px; border: none; }}
 
 QPushButton {{ background: {SUPERFICIE_2}; border: 1px solid {BORDA}; border-radius: 9px; padding: 8px 16px;
