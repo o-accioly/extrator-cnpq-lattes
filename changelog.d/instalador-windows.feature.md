@@ -1,0 +1,1 @@
+O Windows ganha um instalador (`ExtratorLattes-<versão>-setup.exe`): um arquivo só, que instala sem pedir administrador, cria atalho no Menu Iniciar (e, se quiser, na Área de Trabalho) e tem desinstalador. O `.zip` continua disponível.
