@@ -66,7 +66,7 @@ def demo(cfg: Config, banco: J.Banco) -> None:
             shutil.copy(f, destino / f.name)
     nomes = cfg.raiz / "nomes.csv"
     nomes.write_text("Nome;Formação (nível);Instituição onde trabalha;UF / cidade de atuação;Palavras-chave\n"
-                     "Ana Beatriz Exemplo Vasconcelos;Doutorado;UFPE;PE;cannabis\n"
+                     "Ana Beatriz Exemplo Vasconcelos;Doutorado;UFEX;PE;cannabis\n"
                      "Maria da Silva Santos;Doutorado;Universidade Federal da Bahia;BA;\n"
                      "João Pereira da Silva;Mestrado;;SP;enfermagem\n"
                      "Ana Paula Ferreira Lima;Doutorado;USP;SP;canabidiol\n"
@@ -186,9 +186,9 @@ def main() -> int:
     pg.b_cont.hide()
     logs = [("Abrindo o Chrome…", "info"), ("Buscando no CNPq", "etapa"),
             ("193 currículos encontrados.", "ok"), ("Página 1 de 2 · 100 perfis", "etapa")]
-    nomes_demo = ["Lucas Albuquerque Prado", "Marina Fagundes Rezende",
-                  "Rafael Damasceno Xavier", "Ana Beatriz Exemplo Vasconcelos", "Camila Holanda Siqueira",
-                  "Bruno Lacerda Tavares", "Juliana Nogueira Zanetti"]
+    nomes_demo = ["Lucas Albuquerque Prado", "Marina Fagundes Rezende", "Rafael Damasceno Xavier",
+                  "Ana Beatriz Exemplo Vasconcelos", "Camila Holanda Siqueira", "Bruno Lacerda Tavares",
+                  "Juliana Nogueira Zanetti"]
     for i, nm in enumerate(nomes_demo):
         logs.append((f"Baixando {nm} (K000000{i}A1)", "info"))
         logs.append((f"{nm} → 12345678901234{i:02d}.html", "ok"))
