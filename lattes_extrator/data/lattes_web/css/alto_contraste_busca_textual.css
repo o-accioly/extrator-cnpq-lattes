@@ -1,0 +1,246 @@
+.altoContraste * {
+    color: #333333;
+}
+.altoContraste .logo a {
+    background: url("http://estatico.cnpq.br/imagens/logo_cnpq_contraste.png") no-repeat scroll 0 0 transparent;
+}
+.altoContraste a {
+	filter: url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'><filter id=\'grayscale\'><feColorMatrix type=\'matrix\' values=\'0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0 0 0 1 0\'/></filter></svg>#grayscale"); /* Firefox 3.5+ */
+	filter: gray; /* IE6-9 */
+	-webkit-filter: grayscale(100%); /* Chrome 19+ & Safari 6+ */
+}
+.altoContraste body {
+    background: none repeat scroll 0 0 #EEEEEE;
+}
+.altoContraste a:link, .altoContraste .main-content .sub_tit_form{
+    color: #333333;
+}
+.altoContraste a:visited,
+.altoContraste a:active {
+    color: #ffffff;
+}
+.altoContraste a:hover {
+    color: #999999;
+}
+.altoContraste font {
+	filter: url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'><filter id=\'grayscale\'><feColorMatrix type=\'matrix\' values=\'0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0 0 0 1 0\'/></filter></svg>#grayscale"); /* Firefox 3.5+ */
+	filter: gray; /* IE6-9 */
+	-webkit-filter: grayscale(100%); /* Chrome 19+ & Safari 6+ */
+}
+.altoContraste .m-logo {
+	filter: url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'><filter id=\'grayscale\'><feColorMatrix type=\'matrix\' values=\'0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0 0 0 1 0\'/></filter></svg>#grayscale"); /* Firefox 3.5+ */
+	filter: gray !important; /* IE6-9 */
+	-webkit-filter: grayscale(100%); /* Chrome 19+ & Safari 6+ */
+}
+.altoContraste .icons-top-help {
+    background-position: -198px -22px;
+}
+.altoContraste .icons-top-fontMenos {
+    background-position: -132px -22px;
+}
+.altoContraste .icons-top-fontMais {
+    background-position: -110px -22px;
+}
+.altoContraste .icons-top-help:hover {
+    background-position: -198px 0;
+}
+.altoContraste .icons-top-fontMenos:hover {
+    background-position: -132px 0;
+}
+.altoContraste .icons-top-fontMais:hover {
+    background-position: -110px 0;
+}
+.altoContraste .main-content .sub_tit_form label {
+    color: #333333;
+}
+.altoContraste .main-content .tit_form {
+    color: #333333;
+}
+.altoContraste .button {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+}
+.altoContraste .control-bar-top .button {
+    background-color: #FFFFFF !important;
+    color: #333333 !important;
+}
+.altoContraste .main-content .title-wrapper h1 {
+    color: #333333;
+}
+.altoContraste .input-text {
+    background-color: #FFFFFF;
+    border: 1px solid #999999;
+}
+.altoContraste select.input-text {
+    background-color: #FFFFFF;
+    border: 1px solid #999999;
+}
+.altoContraste .main-content select.input-text {
+    background: none repeat scroll 0 0 #FFFFFF;
+    border: 1px solid #999999;
+}
+.altoContraste .layout-cell-12 *:focus {
+    color: #000000 !important;
+}
+
+.altoContraste .modalFiltros .centro {
+    background: none repeat scroll 0 0 #FFFFFF !important;
+    color: #000000 !important;
+}
+.altoContraste input:focus, .menu-header *:focus {
+    box-shadow: 0 0 3px 2px #CCCCCC, 0 0 4px #999999 inset !important;
+    color: #666666 !important;
+}
+.altoContraste .moldal-background {
+    background: none repeat scroll 0 0 #333333;
+}
+.altoContraste .modal-body {
+    background: none repeat scroll 0 0 #333333;
+}
+.altoContraste .title-wrapper h1 {
+    color: #FFFFFF;
+}
+.altoContraste p.resumo {
+    color: #FFFFFF;
+}
+.altoContraste .separator {
+    border-bottom: 1px solid;
+    color: #CCCCCC;
+}
+.altoContraste .layout-cell-pad span {
+    color: #FFFFFF;
+}
+.altoContraste .page {
+    background: none repeat scroll 0 0 #333333;
+    color: #fff;
+}
+body.altoContraste {
+    background: none repeat scroll 0 0 #333333;
+}
+.altoContraste .header {
+    background-color: #FFFFFF;
+    border-bottom: 2px solid #999999;
+}
+.altoContraste .control-bar-wrapper .carregando-cont-indicadores {
+    color: #FFFFFF !important;
+}
+.altoContraste .tit_psq {
+    color: #FFFFFF !important;
+}
+.altoContraste .absolute {
+    background: none repeat scroll 0 0 #333333;
+}
+.altoContraste .grafico {
+	filter: gray; /* IE6-9 */
+	-webkit-filter: grayscale(100%) !important; /* Chrome 19+ & Safari 6+ */
+}
+.altoContraste .grafico h2{
+	color: #000000;
+}
+.altoContraste  .layout-cell-4 {
+	filter: url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'><filter id=\'grayscale\'><feColorMatrix type=\'matrix\' values=\'0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0 0 0 1 0\'/></filter></svg>#grayscale"); /* Firefox 3.5+ */
+	filter: gray; /* IE6-9 */
+	-webkit-filter: grayscale(100%) !important; /* Chrome 19+ & Safari 6+ */
+}
+.altoContraste .layout-cell-pad table span {
+    color: #333333;
+}
+.altoContraste .navigation-wrapper {
+	filter: url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'><filter id=\'grayscale\'><feColorMatrix type=\'matrix\' values=\'0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0 0 0 1 0\'/></filter></svg>#grayscale"); /* Firefox 3.5+ */
+	filter: gray; /* IE6-9 */
+	-webkit-filter: grayscale(100%); /* Chrome 19+ & Safari 6+ */
+}
+.altoContraste .content-wrapper {
+	filter: url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'><filter id=\'grayscale\'><feColorMatrix type=\'matrix\' values=\'0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0 0 0 1 0\'/></filter></svg>#grayscale"); /* Firefox 3.5+ */
+	filter: gray; /* IE6-9 */
+	-webkit-filter: grayscale(100%); /* Chrome 19+ & Safari 6+ */
+}
+.altoContraste .img_link.icone-informacao-autor {
+	filter: url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'><filter id=\'grayscale\'><feColorMatrix type=\'matrix\' values=\'0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0 0 0 1 0\'/></filter></svg>#grayscale"); /* Firefox 3.5+ */
+	filter: gray; /* IE6-9 */
+	-webkit-filter: grayscale(100%); /* Chrome 19+ & Safari 6+ */
+}
+.altoContraste .img_history.icone-informacao-autor {
+	filter: url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'><filter id=\'grayscale\'><feColorMatrix type=\'matrix\' values=\'0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0 0 0 1 0\'/></filter></svg>#grayscale"); /* Firefox 3.5+ */
+	filter: gray; /* IE6-9 */
+	-webkit-filter: grayscale(100%); /* Chrome 19+ & Safari 6+ */	
+}
+.altoContraste .img_cert.icone-informacao-autor {
+	filter: url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'><filter id=\'grayscale\'><feColorMatrix type=\'matrix\' values=\'0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0 0 0 1 0\'/></filter></svg>#grayscale"); /* Firefox 3.5+ */
+	filter: gray; /* IE6-9 */
+	-webkit-filter: grayscale(100%); /* Chrome 19+ & Safari 6+ */	
+}
+.altoContraste .identity .combo a img {
+	filter: url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'><filter id=\'grayscale\'><feColorMatrix type=\'matrix\' values=\'0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0 0 0 1 0\'/></filter></svg>#grayscale"); /* Firefox 3.5+ */
+	filter: gray; /* IE6-9 */
+	-webkit-filter: grayscale(100%); /* Chrome 19+ & Safari 6+ */	
+}
+.altoContraste .inst_back {
+	filter: url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'><filter id=\'grayscale\'><feColorMatrix type=\'matrix\' values=\'0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0 0 0 1 0\'/></filter></svg>#grayscale"); /* Firefox 3.5+ */
+	filter: gray; /* IE6-9 */
+	-webkit-filter: grayscale(100%); /* Chrome 19+ & Safari 6+ */	
+}
+.altoContraste .citacaoTip > img {
+	filter: url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'><filter id=\'grayscale\'><feColorMatrix type=\'matrix\' values=\'0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0 0 0 1 0\'/></filter></svg>#grayscale"); /* Firefox 3.5+ */
+	filter: gray; /* IE6-9 */
+	-webkit-filter: grayscale(100%); /* Chrome 19+ & Safari 6+ */	
+}
+
+.altoContraste .menuPrincipal {
+    background-color: #333333 !important;
+}
+.altoContraste .title-wrapper .resumo {
+    color: #333333;
+}
+.altoContraste .numero-citacao {
+    color: #333333;
+}
+.altoContraste img.foto {
+	filter: url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'><filter id=\'grayscale\'><feColorMatrix type=\'matrix\' values=\'0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0 0 0 1 0\'/></filter></svg>#grayscale"); /* Firefox 3.5+ */
+	filter: gray; /* IE6-9 */
+	-webkit-filter: grayscale(100%); /* Chrome 19+ & Safari 6+ */
+}
+.altoContraste .title-wrapper .separator {
+    border-bottom: 1px solid;
+    color: #333333;
+}
+.altoContraste .button.tab:focus,.altoContraste .control-bar-wrapper .button:focus,.altoContraste .control-bar-wrapper-left .button:focus {
+    background: none repeat scroll 0 0 #333333 !important;
+    border: 1px dashed #FFFFFF;
+    box-shadow: none !important;
+    color: #FFFFFF !important;
+}
+.altoContraste .control-bar-top .button:hover {
+    background-color: #F4F4F4 !important;
+    box-shadow: 1px 1px 1px #CCCCCC inset !important;
+}
+.altoContraste .bt-menu-header.titBottom.fontMenos.icons-top.icons-top-xml {
+    background-position: 0 -43px;
+}
+.altoContraste .bt-menu-header.titBottom.fontMenos.icons-top.icons-top-xml:hover {
+    background-position: 0 0;
+}
+.altoContraste .icons-top-print {
+    background-position: -220px -22px;
+}
+.altoContraste .icons-top-print:hover {
+    background-position: -220px 0;
+}
+.altoContraste .resultado li span {
+    color: #000000;
+}
+.altoContraste .tituloFlow {
+    color: #FFFFFF;
+}
+.altoContraste .inst_back b {
+    color: #FFFFFF;
+}
+.altoContraste .id-orgao {
+    color: #FFFFFF;
+}
+.altoContraste label.sub_tit_form {
+   color: #FFFFFF;
+}
+.altoContraste fieldset label.sub_tit_form {
+    color: #666666;
+}
