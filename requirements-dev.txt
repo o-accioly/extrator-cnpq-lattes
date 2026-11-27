@@ -1,0 +1,5 @@
+# Testes, build do executável e atualização do catálogo de filtros
+-r requirements.txt
+pytest==9.2.0
+pyinstaller==6.22.3
+requests==2.34.2

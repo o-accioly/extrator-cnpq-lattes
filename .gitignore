@@ -1,3 +1,24 @@
+# Dados de coleta (ficam na pasta de trabalho, fora do repositório)
 /htmls/
 /htmls_outros/
+*.log
+*.list
+*.config
+compilação*.xlsx
+compilação*.txt
+
+# Python
 __pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# Build do executável
+build/
+dist/
+
+# CI
+.venv-ci/
+build-ci/
+dist-ci/
