@@ -1,0 +1,43 @@
+# Configuração das ferramentas do projeto (não é um pacote instalável).
+
+[tool.towncrier]
+package = "lattes_extrator"
+directory = "changelog.d"
+filename = "CHANGELOG.md"
+start_string = "<!-- towncrier release notes start -->\n"
+title_format = "## [{version}] — {project_date}"
+template = "changelog.d/_template.md"
+issue_format = ""
+
+[[tool.towncrier.type]]
+directory = "feature"
+name = "Funcionalidades"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "bugfix"
+name = "Correções"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "improvement"
+name = "Melhorias"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "removal"
+name = "Remoções"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "doc"
+name = "Documentação"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "misc"
+name = ""
+showcontent = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
