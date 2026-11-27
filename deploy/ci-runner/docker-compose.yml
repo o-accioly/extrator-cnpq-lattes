@@ -1,13 +1,12 @@
-# Runner self-hosted do CI do Extrator CNPq Lattes, no servidor próprio (projeto "CI Runners").
-# Mesmo desenho dos pools do outros projetos (deploy/ci-runner/ desses repositórios).
+# Runner self-hosted do CI do Extrator CNPq Lattes (ver docs/ci.md).
 #
-# Roda no servidor de produção, então é desenhado para não disputar com ela:
+# Feito para rodar num servidor que também tem outros serviços, sem disputar com eles:
 #   - cpu_shares 256 (produção usa o padrão, 1024): sob disputa de CPU, produção ganha 4 para 1;
 #   - teto de CPU/RAM por container;
 #   - a pasta de trabalho do job vive em RAM (tmpfs); o único volume em disco é o cache do pip.
-# Um slot basta: um build completo (testes + Linux + Windows) leva poucos minutos.
+# Um slot basta: testes + executável Linux levam poucos minutos (o .exe é feito num Windows do GitHub).
 #
-# Variáveis (Environment do painel de deploy): GITHUB_RUNNER_PAT (obrigatória), GITHUB_REPOSITORY (opcional).
+# Variáveis de ambiente do deploy: GITHUB_RUNNER_PAT (obrigatória), GITHUB_REPOSITORY (opcional).
 x-ci-logging: &ci-logging
   driver: json-file
   options:
@@ -36,7 +35,7 @@ services:
       RUNNER_LABELS: lattes-ci
       RUNNER_SLOT: "1"
     tmpfs:
-      # build Linux + Windows ficam em ~3 GB (venvs, build/ e dist/ dos dois sistemas)
+      # venv, build/ e dist/ do executável Linux (~2 GB)
       - /home/runner/_work:size=6g,exec
     volumes:
       - ci-cache:/home/runner/cache
@@ -45,8 +44,7 @@ services:
 
 networks:
   ci:
-    # Sub-rede fixa: o pool automático do Docker já se esgotou uma vez. 10.0.x é do Swarm,
-    # evita esgotar o pool automático em hosts com muitos composes.
+    # Sub-rede fixa: evita esgotar o pool automático de redes do Docker em hosts com muitos composes.
     ipam:
       config:
         - subnet: 10.251.70.0/24
