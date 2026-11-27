@@ -1,6 +1,7 @@
 """Próxima versão a partir dos fragmentos towncrier pendentes em changelog.d/.
 
-removal -> major · feature -> minor · bugfix/improvement/doc/misc -> patch · sem fragmentos -> nada.
+removal -> major · feature -> minor · bugfix/improvement/doc -> patch.
+Só fragmentos misc (internos, não aparecem no changelog) não geram versão: acumulam para a próxima.
 Uso: python ci/versao.py <última-tag ou vazio>   ->  imprime "X.Y.Z" ou "" (sem release)
 """
 import re
@@ -20,7 +21,7 @@ def fragmentos(pasta: Path = Path("changelog.d")) -> list[str]:
 
 
 def proxima(ultima: str, tipos: list[str]) -> str:
-    if not tipos:
+    if not [t for t in tipos if t != "misc"]:
         return ""
     m = re.match(r"v?(\d+)\.(\d+)\.(\d+)", ultima or "")
     if not m:  # primeira release: a versão que está no código

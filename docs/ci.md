@@ -8,7 +8,7 @@ Igual ao dos outros projetos da equipe:
 2. PR para `homolog`. Mudança no programa precisa de um fragmento towncrier em `changelog.d/` (o CI barra sem ele).
 3. Para publicar uma versão: PR `homolog` → `main`.
 4. No merge em `main`, o CI faz a release sozinho:
-   - calcula a versão pelos fragmentos pendentes: `removal` → major, `feature` → minor, os demais → patch;
+   - calcula a versão pelos fragmentos pendentes: `removal` → major, `feature` → minor, `bugfix`/`improvement`/`doc` → patch (só `misc` não gera versão);
    - o towncrier escreve o `CHANGELOG.md` e apaga os fragmentos usados;
    - cria a tag `vX.Y.Z` e a Release no GitHub com o `.exe` (Windows) e o executável Linux;
    - faz o back-merge de `main` em `homolog`.
