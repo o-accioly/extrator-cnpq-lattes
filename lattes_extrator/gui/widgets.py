@@ -369,22 +369,41 @@ class IndicadorPassos(QWidget):
 
 
 class Banner(QFrame):
-    """Faixa de atenção (ex.: resolver captcha no Chrome)."""
+    """Faixa de atenção (ex.: resolver captcha no Chrome, problema no ambiente).
+    ``nivel`` "aviso" (amarelo) ou "erro" (vermelho); ``acao`` põe um botão à direita."""
 
     def __init__(self, texto: str = "") -> None:
         super().__init__()
         self.setProperty("papel", "banner")
+        self.setProperty("nivel", "aviso")
         lay = QHBoxLayout(self)
         lay.setContentsMargins(14, 10, 14, 10)
-        ic = QLabel("⚠")
-        ic.setStyleSheet(f"color: {tema.AMARELO}; font-size: 16pt;")
-        lay.addWidget(ic)
+        lay.setSpacing(tema.ESP_M)
+        self.ic = QLabel("⚠")
+        lay.addWidget(self.ic)
         self.texto = rotulo(texto, quebra=True)
-        self.texto.setStyleSheet(f"color: {tema.AMARELO}; font-weight: 600;")
         lay.addWidget(self.texto, 1)
+        self.b_acao = botao("")
+        self.b_acao.hide()
+        lay.addWidget(self.b_acao, 0, Qt.AlignmentFlag.AlignVCenter)
+        self._cores("aviso")
         self.hide()
 
-    def mostrar(self, texto: str) -> None:
+    def _cores(self, nivel: str) -> None:
+        cor = tema.VERMELHO if nivel == "erro" else tema.AMARELO
+        self.setProperty("nivel", nivel)
+        self.style().unpolish(self)
+        self.style().polish(self)
+        self.ic.setStyleSheet(f"color: {cor}; font-size: 16pt;")
+        self.texto.setStyleSheet(f"color: {cor}; font-weight: 600;")
+
+    def acao(self, texto: str, ao_clicar) -> None:
+        self.b_acao.setText(texto)
+        self.b_acao.clicked.connect(ao_clicar)
+        self.b_acao.show()
+
+    def mostrar(self, texto: str, nivel: str = "aviso") -> None:
+        self._cores(nivel)
         self.texto.setText(texto)
         self.show()
 

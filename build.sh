@@ -8,4 +8,6 @@ python -m pip install --upgrade pip
 pip install -r requirements-dev.txt
 python -m pytest -q tests
 pyinstaller ExtratorLattes.spec --noconfirm --clean
+# confere o executável gerado (módulos carregados sob demanda, Selenium Manager, arquivos)
+dist/ExtratorLattes/ExtratorLattes --cli diagnostico --sem-rede
 echo "Pronto: dist/ExtratorLattes/ExtratorLattes"
