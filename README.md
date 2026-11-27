@@ -20,6 +20,14 @@ Programa com interface gráfica para coletar currículos da Plataforma Lattes (C
 
 Durante a execução aparecem: barra de progresso, velocidade, tempo restante, erros, memória usada e o registro (log) colorido. Dá para pausar ou interromper.
 
+### Verificação do ambiente
+
+Ao abrir, o programa confere em segundo plano tudo de que depende: as bibliotecas internas (inclusive as que o executável carrega sob demanda), o Selenium Manager, o Google Chrome, os arquivos do programa, a pasta de trabalho (escrita, espaço livre, pasta sincronizada na nuvem), o SQLite com busca de texto e o acesso ao site do CNPq. Se algo falhar, uma faixa no Início diz o que é e quais funções param; uma extração que não vai funcionar nem começa. O detalhe fica em **Configurações > Verificação do ambiente**, com botão para copiar o relatório. O último resultado também fica em `diagnostico.json`, na pasta de configuração do programa.
+
+![Verificação do ambiente](docs/prints/72-verificacao-do-ambiente.png)
+
+O perfil do Chrome usado na coleta fica na pasta local do usuário (no Windows, `%LOCALAPPDATA%\ExtratorLattes`), fora da pasta de trabalho, para não ir para o OneDrive/Dropbox. Quem já tinha o perfil dentro da pasta de trabalho continua usando o mesmo.
+
 ## Instalação e uso
 
 **Baixar pronto:** o `.exe` (Windows) e o executável Linux de cada versão estão em [Releases](https://github.com/o-accioly/extrator-cnpq-lattes/releases/latest). Só é preciso ter o Google Chrome instalado.
@@ -46,7 +54,13 @@ No Windows, use `.venv\Scripts\pip` e `.venv\Scripts\python`.
 python -m lattes_extrator --help
 ```
 
-Subcomandos: `processar`, `coletar`, `nomes`, `template`, `listar`, `continuar`.
+Subcomandos: `processar`, `coletar`, `nomes`, `template`, `diagnostico`, `listar`, `continuar`.
+
+Para conferir o ambiente (sai com código 1 se houver problema; `--json arquivo` grava o resultado, útil no `.exe`, que não tem console):
+
+```bash
+python -m lattes_extrator diagnostico
+```
 
 ## Busca por nomes
 
@@ -102,6 +116,10 @@ ONEFILE=1 pyinstaller ExtratorLattes.spec --noconfirm --clean
 
 O executável precisa ser gerado em cada sistema (o `.exe` sai do Windows). O Chrome precisa estar instalado na máquina que vai rodar o programa.
 
+O `build.bat` e o `build.sh` terminam rodando a verificação do ambiente dentro do executável gerado. Ela pega módulo que o PyInstaller deixou de fora: o `selenium` e o `rapidfuzz` carregam partes por `importlib`, que a análise do PyInstaller não enxerga, por isso o `ExtratorLattes.spec` os inclui com `collect_submodules`. O spec também deixa só o Selenium Manager da plataforma do build.
+
+O arquivo único (`ONEFILE=1`) não é o recomendado: com o motor do visualizador (~460 MB), ele extrai tudo numa pasta temporária a cada abertura, o que demora e costuma ser barrado por antivírus.
+
 ## Estrutura
 
 ```
@@ -118,6 +136,7 @@ lattes_extrator/
   planilhas.py               template e leitura da planilha de nomes
   jobs.py                    histórico/retomada (SQLite)
   base.py                    índice pesquisável dos currículos (SQLite FTS5, incremental)
+  diagnostico.py             verificação do ambiente (ao abrir, `diagnostico` na CLI e no CI)
   config.py, eventos.py, texto.py
   gui/                       interface PySide6 (intro, janela, páginas, réplica do CNPq)
   data/                      catálogo de filtros do CNPq, arte ASCII, ícone

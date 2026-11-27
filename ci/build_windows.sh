@@ -33,6 +33,19 @@ echo "::group::Teste do .exe"
 rm -f build-ci/windows/template.xlsx
 timeout 300 "$EXE" --cli template "build-ci/windows/template.xlsx" || true
 test -s build-ci/windows/template.xlsx
+# Verificação do ambiente dentro do .exe (bibliotecas carregadas sob demanda, Selenium Manager,
+# SQLite FTS5…). O .exe não tem console: o resultado vem pelo JSON.
+rm -f build-ci/windows/diagnostico.json
+timeout 300 "$EXE" --cli diagnostico --sem-rede --json build-ci/windows/diagnostico.json || true
+"${PY[@]}" - build-ci/windows/diagnostico.json <<'PYEOF'
+import json, sys
+dados = json.load(open(sys.argv[1], encoding="utf-8"))
+for c in dados["checagens"]:
+    print(f"[{c['status']:>5}] {c['nome']}: {c['detalhe']}")
+    if c["status"] == "erro":
+        print(f"::error::{c['nome']}: {c['detalhe']}")
+sys.exit(0 if dados["ok"] else 1)
+PYEOF
 # Visualizador do currículo (QtWebEngine) dentro do .exe. Informativo: a máquina do CI não tem GPU.
 timeout 300 "$EXE" --cli autoteste-visualizador tests/fixtures/1234567890123456.html \
   build-ci/windows/visualizador.png > build-ci/windows/visualizador.txt 2>&1 || true

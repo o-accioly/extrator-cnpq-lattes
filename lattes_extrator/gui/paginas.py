@@ -125,6 +125,9 @@ class PaginaInicio(Pagina):
         super().__init__(janela)
         self.cabecalho("Extrator CNPq Lattes",
                        "Colete, encontre e organize currículos da Plataforma Lattes em planilhas prontas para análise.")
+        self.banner_amb = Banner()
+        self.banner_amb.acao("Ver detalhes", self.janela.ver_diagnostico)
+        self.lay.addWidget(self.banner_amb)
 
         self.lay.addWidget(rotulo("O QUE VOCÊ QUER FAZER?", "rotulo"))
         cards = GradeResponsiva(largura_min=290, max_colunas=3, colunas_validas=(3, 1))
@@ -175,6 +178,22 @@ class PaginaInicio(Pagina):
         self.lay.addSpacing(tema.ESP_XS)
         self.lay.addLayout(rod)
         self.lay.addStretch()
+
+    def mostrar_ambiente(self, res, aviso_pasta: str = "") -> None:
+        """Faixa no topo quando a verificação do ambiente achou algo (some se está tudo certo)."""
+        partes = [aviso_pasta] if aviso_pasta else []
+        if res.erros:
+            funcoes = sorted({f for c in res.erros for f in c.afeta})
+            from ..diagnostico import plural
+            partes.append(plural(len(res.erros), "problema", "problemas").capitalize() + " no ambiente: "
+                          + ", ".join(c.nome for c in res.erros)
+                          + ". Não vai funcionar: " + ", ".join(funcoes) + ".")
+        elif res.avisos:
+            partes.append("Atenção: " + "; ".join(f"{c.nome} — {c.detalhe}" for c in res.avisos))
+        if partes:
+            self.banner_amb.mostrar("  ".join(partes), "erro" if res.erros else "aviso")
+        else:
+            self.banner_amb.hide()
 
     def ao_mostrar(self) -> None:
         jobs = self.banco.listar(200)
@@ -1201,7 +1220,8 @@ class PaginaConfig(Pagina):
         v.setContentsMargins(0, 0, 6, tema.ESP_S)
         v.setSpacing(tema.ESP_L)
 
-        g1 = CardForm("Pasta de trabalho", "Currículos (htmls), planilhas, histórico de extrações e o perfil do Chrome.")
+        g1 = CardForm("Pasta de trabalho", "Currículos (htmls), planilhas e histórico de extrações. Prefira uma pasta "
+                                           "local, fora do OneDrive/Dropbox.")
         self.e_pasta = QLineEdit()
         caixa_pasta = caixa_h(self.e_pasta, botao("Escolher…", None, self._escolher_pasta, icone="pasta"), espaco=tema.ESP_S)
         g1.campo("Local", caixa_pasta, largura=720)
@@ -1254,6 +1274,13 @@ class PaginaConfig(Pagina):
         self.c_intro = QCheckBox("Mostrar a animação de abertura")
         g6.campo("Abertura", self.c_intro)
         v.addWidget(g6)
+
+        g7 = CardForm("Verificação do ambiente", "Feita sempre que o programa abre: bibliotecas, Chrome, "
+                                                 "pasta de trabalho e acesso ao CNPq.")
+        self.l_amb = rotulo("Verificando…", "suave", quebra=True)
+        g7.campo("Resultado", caixa_h(self.l_amb, botao("Ver detalhes", None, self.janela.ver_diagnostico,
+                                                         icone="detalhe"), espaco=tema.ESP_M), largura=720)
+        v.addWidget(g7)
         v.addStretch()
         self.lay.addWidget(rolavel(corpo), 1)
 
@@ -1269,6 +1296,11 @@ class PaginaConfig(Pagina):
 
     def ao_mostrar(self) -> None:
         self._preencher(self.cfg)
+
+    def mostrar_ambiente(self, res) -> None:
+        cor = tema.VERMELHO if res.erros else tema.AMARELO if res.avisos else tema.VERDE
+        self.l_amb.setText(res.resumo())
+        self.l_amb.setStyleSheet(f"color: {cor}; font-weight: 600;")
 
     def _preencher(self, c: Config) -> None:
         self.e_pasta.setText(c.pasta_trabalho)
