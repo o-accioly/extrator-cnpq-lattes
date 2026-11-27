@@ -24,6 +24,9 @@ echo "::group::Teste do executável Linux"
 EXE=build-ci/linux/dist/ExtratorLattes/ExtratorLattes
 "$EXE" --cli template build-ci/linux/template.xlsx
 test -s build-ci/linux/template.xlsx
+# Verificação do ambiente dentro do executável congelado: pega módulo que o PyInstaller deixou de
+# fora (o selenium e o rapidfuzz carregam partes por importlib). Sai com 1 se houver erro.
+"$EXE" --cli diagnostico --sem-rede --json build-ci/linux/diagnostico.json
 # o visualizador do currículo (QtWebEngine) precisa abrir dentro do executável congelado
 "$EXE" --cli autoteste-visualizador tests/fixtures/1234567890123456.html build-ci/linux/visualizador.png | tee build-ci/linux/visualizador.txt
 grep -q "modo=web carregou=\[True\]" build-ci/linux/visualizador.txt

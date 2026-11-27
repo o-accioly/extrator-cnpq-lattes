@@ -1,28 +1,34 @@
 """Janela principal: barra lateral + páginas, e o controle da extração em andamento."""
 from __future__ import annotations
 
-from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer
 from PySide6.QtGui import QCloseEvent, QGuiApplication
 from PySide6.QtWidgets import (QApplication, QButtonGroup, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QMainWindow,
                                QMessageBox, QPushButton, QStackedWidget, QVBoxLayout, QWidget)
 
 from .. import NOME_APP, __version__
+from .. import diagnostico as D
 from .. import jobs as J
 from ..config import Config
 from . import icones, tema
 from .paginas import (AssistenteBusca, AssistenteNomes, AssistenteProcessar, PaginaConfig, PaginaExecucao,
                       PaginaExtracoes, PaginaInicio)
 from .pagina_base import PaginaBase, PaginaPerfil
+from .diagnostico import DialogoDiagnostico, TrabalhoDiagnostico, texto_bloqueio
 from .workers import Execucao
+
+FUNCAO_DO_TIPO = {J.TIPO_BUSCA: D.COLETA, J.TIPO_NOMES: D.NOMES, J.TIPO_PROCESSAR: D.PLANILHA}
 
 
 class JanelaPrincipal(QMainWindow):
     def __init__(self, cfg: Config) -> None:
         super().__init__()
         self.cfg = cfg
-        self.cfg.garantir_pastas()
+        self.aviso_pasta = self.cfg.garantir_pastas_ou_padrao()
         self.banco = J.Banco(cfg.banco)
         self.execucao: Execucao | None = None
+        self.diag: D.Resultado | None = None
+        self._trabalho_diag: TrabalhoDiagnostico | None = None
         self.setWindowTitle(NOME_APP)
         self.setMinimumSize(960, 640)
         tela = QGuiApplication.primaryScreen()
@@ -53,6 +59,33 @@ class JanelaPrincipal(QMainWindow):
         for p in self.paginas.values():
             self.pilha.addWidget(p)
         self.ir("inicio")
+        QTimer.singleShot(0, self.verificar_ambiente)
+
+    # ------------------------------------------------------- verificação do ambiente
+    def verificar_ambiente(self) -> None:
+        """Roda todas as checagens em segundo plano (o teste de rede leva alguns segundos)."""
+        if self._trabalho_diag and self._trabalho_diag.isRunning():
+            return
+        self._trabalho_diag = TrabalhoDiagnostico(self.cfg)
+        self._trabalho_diag.pronto.connect(self._ambiente_verificado)
+        self._trabalho_diag.start()
+
+    def _ambiente_verificado(self, res: D.Resultado) -> None:
+        self.diag = res
+        inicio: PaginaInicio = self.paginas["inicio"]
+        inicio.mostrar_ambiente(res, self.aviso_pasta)
+        self.paginas["config"].mostrar_ambiente(res)
+
+    def ver_diagnostico(self) -> None:
+        dlg = DialogoDiagnostico(self.cfg, self.diag, self)
+        dlg.atualizado.connect(self._ambiente_verificado)
+        dlg.exec()
+
+    def _bloqueios(self, funcao: str) -> list[D.Checagem]:
+        res = self.diag
+        if res is None:   # ainda verificando: checagem local rápida, sem rede
+            res = D.executar(self.cfg, rede=False)
+        return res.bloqueia(funcao)
 
     # ------------------------------------------------------------ barra lateral
     def _barra_lateral(self) -> QWidget:
@@ -199,6 +232,17 @@ class JanelaPrincipal(QMainWindow):
                                         "Já existe uma extração rodando. Espere terminar ou interrompa para iniciar outra.")
             self.mostrar_execucao(self.execucao_ativa())
             return
+        job = self.banco.obter(job_id)
+        funcao = D.PLANILHA if somente_planilha else FUNCAO_DO_TIPO.get(job.tipo if job else "", D.PLANILHA)
+        problemas = self._bloqueios(funcao)
+        if problemas:
+            caixa = QMessageBox(QMessageBox.Icon.Critical, "Não dá para iniciar", texto_bloqueio(problemas, funcao),
+                                QMessageBox.StandardButton.Close, self)
+            detalhes = caixa.addButton("Ver verificação completa", QMessageBox.ButtonRole.ActionRole)
+            caixa.exec()
+            if caixa.clickedButton() is detalhes:
+                self.ver_diagnostico()
+            return
         self.execucao = Execucao(job_id, self.banco, self.cfg, somente_planilha)
         pag: PaginaExecucao = self.paginas["execucao"]
         pag.acompanhar(job_id, self.execucao)
@@ -231,9 +275,10 @@ class JanelaPrincipal(QMainWindow):
         QApplication.beep()
 
     def trocar_pasta(self) -> None:
-        self.cfg.garantir_pastas()
+        self.aviso_pasta = self.cfg.garantir_pastas_ou_padrao()
         self.banco.fechar()
         self.banco = J.Banco(self.cfg.banco)
+        self.verificar_ambiente()
 
     def closeEvent(self, e: QCloseEvent) -> None:
         if self.execucao_ativa():
@@ -245,6 +290,8 @@ class JanelaPrincipal(QMainWindow):
             self.execucao.controle.cancelar()
             self.execucao.wait(15000)
         self.banco.fechar()
+        if self._trabalho_diag and self._trabalho_diag.isRunning():
+            self._trabalho_diag.wait(10000)
         base = self.paginas["base"]
         if base.indexador and base.indexador.isRunning():
             base.indexador.wait(5000)

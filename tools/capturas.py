@@ -98,13 +98,39 @@ def main() -> int:
         salvar(intro, destino, nome)
     intro.close()
 
+    from lattes_extrator import diagnostico as D
+    from lattes_extrator.gui.diagnostico import DialogoDiagnostico
     from lattes_extrator.gui.janela import JanelaPrincipal
+    # verificação do ambiente determinística: sem rede e sem a thread do programa de verdade
+    JanelaPrincipal.verificar_ambiente = lambda self: None
     jan = JanelaPrincipal(cfg)
     jan.resize(*TAM)
     jan.show()
+    diag_ok = D.executar(cfg, rede=False)
+    for c in diag_ok.checagens:   # caminhos desta máquina não vão para as capturas públicas
+        if c.nome == "Arquivos do programa":
+            c.detalhe = "lattes_extrator/data"
+        if c.nome == "Google Chrome":
+            c.detalhe = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+    diag_ruim = D.Resultado([c for c in diag_ok.checagens])
+    diag_ruim.checagens[2] = D.Checagem(
+        "Automação do Chrome (Selenium)", D.ERRO,
+        "Não carregou: selenium.webdriver.chrome.options (ModuleNotFoundError)",
+        "O executável está incompleto. Baixe a versão mais recente do programa.", (D.COLETA, D.NOMES))
+    diag_ruim.checagens.append(D.Checagem("Acesso ao CNPq", D.AVISO, "Sem resposta de buscatextual.cnpq.br",
+                                          "Confira a internet ou o proxy/firewall.", (D.COLETA, D.NOMES)))
     print("Páginas:")
+    jan._ambiente_verificado(diag_ok)
     jan.ir("inicio")
     salvar(jan, destino, "10-inicio")
+    jan._ambiente_verificado(diag_ruim)
+    salvar(jan, destino, "11-inicio-problema-no-ambiente")
+    dlg = DialogoDiagnostico(cfg, diag_ruim, jan)
+    dlg.resize(min(760, TAM[0] - 80), min(680, TAM[1] - 60))
+    dlg.show()
+    salvar(dlg, destino, "72-verificacao-do-ambiente")
+    dlg.close()
+    jan._ambiente_verificado(diag_ok)
 
     jan.abrir_assistente("busca")
     salvar(jan, destino, "20-busca-como-funciona")

@@ -10,7 +10,7 @@ Igual ao dos outros projetos da equipe:
 4. No merge em `main`, o CI faz a release sozinho:
    - calcula a versão pelos fragmentos pendentes: `removal` → major, `feature` → minor, `bugfix`/`improvement`/`doc` → patch (só `misc` não gera versão);
    - o towncrier escreve o `CHANGELOG.md` e apaga os fragmentos usados;
-   - cria a tag `vX.Y.Z` e a Release no GitHub com o `.exe` (Windows) e o executável Linux;
+   - cria a tag `vX.Y.Z` e a Release no GitHub com o instalador Windows (`ExtratorLattes-X.Y.Z-setup.exe`), o `.zip` do Windows e o executável Linux;
    - faz o back-merge de `main` em `homolog`.
 
 Commits seguem Conventional Commits em português (`feat(base): ...`), sem menção a IA. Regras completas em `.claude/rules/`.
@@ -21,8 +21,11 @@ Em todo PR e em todo push em `homolog` ou `main`:
 
 1. fragmento towncrier (em PR);
 2. testes (`pytest`);
-3. executável **Linux** com PyInstaller, testado: gera o template e abre o visualizador do currículo (QtWebEngine) dentro do executável;
-4. executável **Windows** (`ExtratorLattes.exe`) com PyInstaller, testado: o `.exe` gera o template.
+3. executável **Linux** com PyInstaller, testado: gera o template, passa na verificação do ambiente (`--cli diagnostico --sem-rede`) e abre o visualizador do currículo (QtWebEngine) dentro do executável;
+4. executável **Windows** (`ExtratorLattes.exe`) com PyInstaller, testado: o `.exe` gera o template e passa na verificação do ambiente (resultado pelo JSON, já que o `.exe` não tem console);
+5. **instalador Windows** (`ExtratorLattes-<versão>-setup.exe`), gerado com o Inno Setup do runner (`ci/ExtratorLattes.iss`) a partir da pasta já testada. Instala por usuário em `%LOCALAPPDATA%\Programs\ExtratorLattes`, sem administrador, com atalhos e desinstalador. As propriedades do arquivo levam nome e versão (numérica `X.Y.Z.0`; o build de desenvolvimento usa a última tag).
+
+A verificação do ambiente dentro do executável é o que pega biblioteca que o PyInstaller deixou de fora (como o `selenium.webdriver.chrome.options`, carregado sob demanda): o job falha com `::error::` apontando a checagem.
 
 Os executáveis de cada execução ficam como artefatos por 7 dias.
 
