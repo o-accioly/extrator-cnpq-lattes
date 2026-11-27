@@ -24,7 +24,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       ca-certificates curl jq unzip zip util-linux locales \
+       ca-certificates curl jq unzip zip util-linux locales binutils \
        python3 python3-venv python3-dev \
        wine wine64 \
        libgl1 libegl1 libopengl0 libxkbcommon0 libxkbcommon-x11-0 libfontconfig1 libfreetype6 libdbus-1-3 \
