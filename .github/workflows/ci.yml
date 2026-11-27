@@ -1,0 +1,171 @@
+# CI do Extrator CNPq Lattes: testes, executáveis Windows (.exe) e Linux, changelog e release.
+#
+# Em todo push/PR: testes + os dois executáveis (artefatos do workflow por 7 dias).
+# Em push na main com commits "feat"/"fix"/"perf" (ou "!"): a versão sobe sozinha (git-cliff, ver
+# cliff.toml), o CHANGELOG.md é atualizado, a tag vX.Y.Z é criada e sai uma Release com os executáveis.
+#
+# Onde roda: runners do GitHub (Windows nativo para o .exe). Com a variável do repositório
+# USAR_RUNNER_PROPRIO=true, os builds vão para o runner self-hosted do servidor próprio (deploy/ci-runner,
+# label lattes-ci), e o .exe é gerado no Wine.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  GIT_CLIFF_VERSION: "2.14.2"
+  GIT_CLIFF_SHA256: "24f397c733add5390fdceee3a2088588ab0d5f944ce00d34cb7029b888cf2db4"
+
+jobs:
+  versao:
+    name: Versão e changelog
+    runs-on: ubuntu-latest
+    outputs:
+      versao: ${{ steps.v.outputs.versao }}
+      liberar: ${{ steps.v.outputs.liberar }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Instalar git-cliff
+        run: |
+          arq="git-cliff-${GIT_CLIFF_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
+          curl -fsSLO "https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}/${arq}"
+          echo "${GIT_CLIFF_SHA256}  ${arq}" | sha256sum -c -
+          tar xzf "$arq" && sudo install "git-cliff-${GIT_CLIFF_VERSION}/git-cliff" /usr/local/bin/git-cliff
+      - name: Calcular versão
+        id: v
+        run: |
+          atual="$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)"
+          proxima="$(git-cliff --bumped-version 2>/dev/null || true)"
+          # Só feat/fix/perf (ou mudança incompatível, "!") geram versão; docs/ci/chore sozinhos não.
+          desde="${atual:+$atual..}HEAD"
+          relevantes="$(git log "$desde" --format=%s | grep -Ec '^(feat|fix|perf)(\([^)]*\))?!?:' || true)"
+          liberar=false
+          if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/heads/main && -n "$proxima" \
+                && "$proxima" != "$atual" && "$relevantes" -gt 0 ]]; then
+            liberar=true
+          fi
+          if [[ "$liberar" == true ]]; then versao="${proxima#v}"; else versao="${atual#v}"; versao="${versao:-0.0.0}-dev.${GITHUB_SHA::7}"; fi
+          echo "versao=$versao" >> "$GITHUB_OUTPUT"
+          echo "liberar=$liberar" >> "$GITHUB_OUTPUT"
+          echo "Última tag: ${atual:-nenhuma} · próxima: ${proxima:-nenhuma} · build: $versao · release: $liberar" | tee -a "$GITHUB_STEP_SUMMARY"
+          git-cliff --unreleased --tag "v${versao}" --strip all > notas.md || true
+          { echo; echo "### O que entra nesta versão"; cat notas.md; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: notas
+          path: notas.md
+          retention-days: 7
+
+  linux:
+    name: Testes + Linux
+    needs: versao
+    runs-on: ${{ vars.USAR_RUNNER_PROPRIO == 'true' && fromJSON('["self-hosted","lattes-ci"]') || 'ubuntu-24.04' }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bibliotecas do Qt (runner do GitHub)
+        if: runner.environment == 'github-hosted'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libgl1 libegl1 libopengl0 libxkbcommon0 \
+            libxkbcommon-x11-0 libfontconfig1 libdbus-1-3 libnss3 libxcomposite1 libxdamage1 libxrandr2 libxtst6 \
+            libxshmfence1 libgbm1 libasound2t64 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 \
+            libxkbfile1 fonts-dejavu-core >/dev/null
+      - uses: actions/setup-python@v5
+        if: runner.environment == 'github-hosted'
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - name: Testes, executável Linux e teste do executável
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QTWEBENGINE_CHROMIUM_FLAGS: --disable-gpu --no-sandbox
+        run: ci/build_linux.sh "${{ needs.versao.outputs.versao }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            dist-ci/*linux-x64.tar.gz
+            dist-ci/teste-visualizador-linux.png
+          compression-level: 0
+          retention-days: 7
+
+  windows:
+    name: Windows (.exe)
+    needs: versao
+    runs-on: ${{ vars.USAR_RUNNER_PROPRIO == 'true' && fromJSON('["self-hosted","lattes-ci"]') || 'windows-2022' }}
+    timeout-minutes: 75
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        if: runner.environment == 'github-hosted'
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - name: Gerar e testar o ExtratorLattes.exe
+        run: ci/build_windows.sh "${{ needs.versao.outputs.versao }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            dist-ci/*windows-x64.zip
+            dist-ci/teste-visualizador-windows.png
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+  release:
+    name: Release
+    needs: [versao, linux, windows]
+    if: needs.versao.outputs.liberar == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Instalar git-cliff
+        run: |
+          arq="git-cliff-${GIT_CLIFF_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
+          curl -fsSLO "https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}/${arq}"
+          echo "${GIT_CLIFF_SHA256}  ${arq}" | sha256sum -c -
+          tar xzf "$arq" && sudo install "git-cliff-${GIT_CLIFF_VERSION}/git-cliff" /usr/local/bin/git-cliff
+      - uses: actions/download-artifact@v4
+        with:
+          path: artefatos
+          merge-multiple: true
+      - name: CHANGELOG, versão, tag e Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSAO: ${{ needs.versao.outputs.versao }}
+        run: |
+          tag="v${VERSAO}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git-cliff --tag "$tag" -o CHANGELOG.md
+          ci/definir_versao.sh "$VERSAO"
+          git add CHANGELOG.md lattes_extrator/__init__.py
+          git commit -m "chore(release): ${tag}"
+          git tag -a "$tag" -m "Extrator CNPq Lattes ${tag}"
+          git push origin "HEAD:${GITHUB_REF_NAME}" "$tag"
+          gh release create "$tag" --title "Extrator CNPq Lattes ${tag}" --notes-file artefatos/notas.md \
+            artefatos/*.zip artefatos/*.tar.gz
+          echo "Release ${tag} publicada." >> "$GITHUB_STEP_SUMMARY"

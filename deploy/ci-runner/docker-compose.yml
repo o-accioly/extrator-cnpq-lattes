@@ -1,0 +1,55 @@
+# Runner self-hosted do CI do Extrator CNPq Lattes, no servidor próprio (projeto "CI Runners").
+# Mesmo desenho dos pools do outros projetos (deploy/ci-runner/ desses repositórios).
+#
+# Roda no servidor de produção, então é desenhado para não disputar com ela:
+#   - cpu_shares 256 (produção usa o padrão, 1024): sob disputa de CPU, produção ganha 4 para 1;
+#   - teto de CPU/RAM por container;
+#   - a pasta de trabalho do job vive em RAM (tmpfs); o único volume em disco é o cache do pip.
+# Um slot basta: um build completo (testes + Linux + Windows) leva poucos minutos.
+#
+# Variáveis (Environment do painel de deploy): GITHUB_RUNNER_PAT (obrigatória), GITHUB_REPOSITORY (opcional).
+x-ci-logging: &ci-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+services:
+  lattes-runner-1:
+    build:
+      context: ../..
+      dockerfile: deploy/ci-runner/Dockerfile
+    image: lattes-ci-runner:2.338.1-py3.12
+    restart: unless-stopped
+    logging: *ci-logging
+    stop_grace_period: 30s
+    cpus: 8
+    mem_limit: 12g
+    memswap_limit: 12g
+    cpu_shares: 256
+    pids_limit: 4096
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      GITHUB_REPOSITORY: ${GITHUB_REPOSITORY:-o-accioly/extrator-cnpq-lattes}
+      GITHUB_RUNNER_PAT: ${GITHUB_RUNNER_PAT:?defina GITHUB_RUNNER_PAT}
+      RUNNER_LABELS: lattes-ci
+      RUNNER_SLOT: "1"
+    tmpfs:
+      # build Linux + Windows ficam em ~3 GB (venvs, build/ e dist/ dos dois sistemas)
+      - /home/runner/_work:size=6g,exec
+    volumes:
+      - ci-cache:/home/runner/cache
+    networks:
+      - ci
+
+networks:
+  ci:
+    # Sub-rede fixa: o pool automático do Docker já se esgotou uma vez. 10.0.x é do Swarm,
+    # evita esgotar o pool automático em hosts com muitos composes.
+    ipam:
+      config:
+        - subnet: 10.251.70.0/24
+
+volumes:
+  ci-cache: {}
