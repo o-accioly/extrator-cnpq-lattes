@@ -1,5 +1,5 @@
-# Runner self-hosted do GitHub Actions do Extrator CNPq Lattes (mesmo desenho dos runners do
-# outros projetos no servidor próprio: imagem oficial do runner, job just-in-time, usuário sem sudo).
+# Runner self-hosted do GitHub Actions do Extrator CNPq Lattes (docs/ci.md): imagem oficial do
+# runner, job just-in-time, usuário sem sudo.
 #
 # O que esta imagem traz além da oficial:
 #   - Python 3.12 do Ubuntu + bibliotecas de sistema do Qt/QtWebEngine: testes e build Linux;

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Executável Windows (ExtratorLattes.exe). Uso: ci/build_windows.sh <versão>  (gera dist-ci/*.zip)
 #   - num runner Windows (GitHub): Python Windows nativo;
-#   - no runner próprio (Linux): Python Windows dentro do Wine (imagem deploy/ci-runner).
+#   - no runner self-hosted (Linux, deploy/ci-runner): Python Windows dentro do Wine (imagem deploy/ci-runner).
 set -euo pipefail
 VERSAO="${1:?versão}"
 cd "$(dirname "$0")/.."

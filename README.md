@@ -68,7 +68,7 @@ Subcomandos: `processar`, `coletar`, `nomes`, `template`, `listar`, `continuar`.
 
 ## CI (executáveis automáticos)
 
-Cada push na `main` roda os testes e gera o `ExtratorLattes.exe` (Windows) e o executável Linux no runner próprio. Uma tag `v*` publica uma Release com os dois. Detalhes, inclusive o token do runner, em [docs/ci.md](docs/ci.md).
+Todo PR roda os testes e gera o `ExtratorLattes.exe` (Windows) e o executável Linux, cada um testado. O merge em `main` publica a versão sozinho: changelog pelo towncrier, tag e Release com os executáveis. Fluxo de trabalho e detalhes em [docs/ci.md](docs/ci.md) e [CLAUDE.md](CLAUDE.md).
 
 ## Gerar o executável
 
