@@ -14,6 +14,8 @@ from __future__ import annotations
 import base64
 import random
 import re
+import subprocess
+import sys
 import time
 from dataclasses import dataclass, field
 
@@ -128,11 +130,16 @@ class NavegadorLattes:
 
     # ------------------------------------------------------------------ ciclo
     def abrir(self) -> None:
+        # Caminhos completos de propósito: o ``selenium.webdriver`` carrega ``ChromeOptions``/``Chrome``
+        # sob demanda (importlib), e o PyInstaller não enxerga esses módulos se o import for indireto.
         try:
-            from selenium import webdriver
+            from selenium.webdriver.chrome.options import Options
+            from selenium.webdriver.chrome.service import Service
+            from selenium.webdriver.chrome.webdriver import WebDriver
         except ImportError as e:
-            raise ErroNavegador("Selenium não está instalado (pip install selenium).") from e
-        opts = webdriver.ChromeOptions()
+            raise ErroNavegador(f"A automação do Chrome (Selenium) não carregou: {e}. "
+                                "Atualize o programa para a versão mais recente.") from e
+        opts = Options()
         opts.add_argument("--start-maximized")
         opts.add_argument("--lang=pt-BR")
         opts.add_experimental_option("excludeSwitches", ["enable-automation", "enable-logging"])
@@ -142,7 +149,10 @@ class NavegadorLattes:
             opts.add_argument(f"--user-data-dir={self.cfg.perfil_chrome}")
         self.rep.log("Abrindo o Chrome…")
         try:
-            self.driver = webdriver.Chrome(options=opts)  # Selenium Manager baixa o driver certo
+            # Executável sem console no Windows: sem a flag, o chromedriver abre uma janela preta.
+            flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if sys.platform.startswith("win") else 0
+            # Selenium Manager baixa o driver certo para o Chrome instalado
+            self.driver = WebDriver(options=opts, service=Service(popen_kw={"creation_flags": flags}))
         except Exception as e:
             msg = str(e).splitlines()[0]
             if "user data directory is already in use" in str(e):
