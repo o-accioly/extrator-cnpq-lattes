@@ -3,3 +3,4 @@
 pytest==9.2.0
 pyinstaller==6.22.3
 requests==2.34.2
+towncrier==26.9.0
