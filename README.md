@@ -30,7 +30,10 @@ O perfil do Chrome usado na coleta fica na pasta local do usuário (no Windows, 
 
 ## Instalação e uso
 
-**Baixar pronto:** o `.exe` (Windows) e o executável Linux de cada versão estão em [Releases](https://github.com/o-accioly/extrator-cnpq-lattes/releases/latest). Só é preciso ter o Google Chrome instalado.
+**Baixar pronto:** cada versão está em [Releases](https://github.com/o-accioly/extrator-cnpq-lattes/releases/latest). Só é preciso ter o Google Chrome instalado.
+
+- **Windows:** baixe `ExtratorLattes-<versão>-setup.exe` e abra. Ele instala em `%LOCALAPPDATA%\Programs\ExtratorLattes` sem pedir administrador, cria o atalho no Menu Iniciar (e, se marcado, na Área de Trabalho) e aparece em *Aplicativos instalados* para desinstalar. Para atualizar, rode o instalador da versão nova por cima. Quem prefere não instalar pode baixar o `.zip`, extrair e abrir `ExtratorLattes.exe`.
+- **Linux:** baixe o `.tar.gz`, extraia e abra `ExtratorLattes/ExtratorLattes`.
 
 **Rodar do código:** requer Python 3.10+ e o Google Chrome.
 
@@ -118,7 +121,9 @@ O executável precisa ser gerado em cada sistema (o `.exe` sai do Windows). O Ch
 
 O `build.bat` e o `build.sh` terminam rodando a verificação do ambiente dentro do executável gerado. Ela pega módulo que o PyInstaller deixou de fora: o `selenium` e o `rapidfuzz` carregam partes por `importlib`, que a análise do PyInstaller não enxerga, por isso o `ExtratorLattes.spec` os inclui com `collect_submodules`. O spec também deixa só o Selenium Manager da plataforma do build.
 
-O arquivo único (`ONEFILE=1`) não é o recomendado: com o motor do visualizador (~460 MB), ele extrai tudo numa pasta temporária a cada abertura, o que demora e costuma ser barrado por antivírus.
+O arquivo único (`ONEFILE=1`) não é o recomendado: com o motor do visualizador (~460 MB), ele extrai tudo numa pasta temporária a cada abertura, o que demora e costuma ser barrado por antivírus. Para distribuir um arquivo só no Windows, use o instalador.
+
+**Instalador Windows:** com o [Inno Setup 6](https://jrsoftware.org/isinfo.php) instalado e a pasta `ExtratorLattes` já gerada pelo PyInstaller, rode `iscc -DVersao=<versão> -DOrigem=..\dist\ExtratorLattes ci\ExtratorLattes.iss` (o `-DOrigem` é relativo à pasta `ci\`). Sai `ExtratorLattes-<versão>-setup.exe` em `ci\Output\`. O CI faz isso sozinho no `ci/build_windows.sh`.
 
 ## Estrutura
 
