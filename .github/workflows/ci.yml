@@ -1,8 +1,8 @@
 # CI do Extrator CNPq Lattes: testes, executáveis Windows (.exe) e Linux, changelog e release.
 #
 # Fluxo: branches de trabalho -> PR para `homolog` -> PR `homolog` -> `main`.
-#   - PR e push em homolog/main: fragmento towncrier (em PR), testes e os dois executáveis
-#     (artefatos do workflow por 7 dias);
+#   - PR e push em homolog/main: fragmento towncrier (em PR), testes, os dois executáveis e o
+#     instalador Windows (artefatos do workflow por 7 dias);
 #   - push na `main` com fragmentos pendentes em changelog.d/: a versão sobe sozinha
 #     (removal = major, feature = minor, demais = patch), o towncrier escreve o CHANGELOG.md,
 #     sai a tag vX.Y.Z, a Release com os executáveis e o back-merge main -> homolog.
@@ -131,6 +131,7 @@ jobs:
           name: windows
           path: |
             dist-ci/*windows-x64.zip
+            dist-ci/*-setup.exe
             dist-ci/teste-visualizador-windows.png
           if-no-files-found: error
           compression-level: 0
@@ -173,7 +174,7 @@ jobs:
           git tag -a "$tag" -m "Extrator CNPq Lattes ${tag}"
           git push origin "HEAD:main" "$tag"
           gh release create "$tag" --title "Extrator CNPq Lattes ${tag}" --notes-file notas.md \
-            artefatos/*.zip artefatos/*.tar.gz
+            artefatos/*-setup.exe artefatos/*.zip artefatos/*.tar.gz
           echo "Release ${tag} publicada." >> "$GITHUB_STEP_SUMMARY"
       - name: Back-merge main -> homolog
         env:
