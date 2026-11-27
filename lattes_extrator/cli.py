@@ -6,6 +6,7 @@ Exemplos:
     python -m lattes_extrator coletar "cannabis" --texto cannabis --limite 50
     python -m lattes_extrator nomes minha_planilha.xlsx
     python -m lattes_extrator template template.xlsx
+    python -m lattes_extrator diagnostico          # confere bibliotecas, Chrome, pasta e acesso ao CNPq
     python -m lattes_extrator listar
     python -m lattes_extrator continuar <id>
 """
@@ -54,6 +55,11 @@ def main(argv: list[str] | None = None) -> int:
     t = sub.add_parser("template", help="gera o template da planilha de nomes")
     t.add_argument("destino", nargs="?", default="template busca por nomes.xlsx")
 
+    d = sub.add_parser("diagnostico", help="verifica se o ambiente tem tudo para rodar (sai com 1 se houver problema)")
+    d.add_argument("--sem-rede", action="store_true", help="não testa o acesso ao CNPq")
+    d.add_argument("--json", metavar="ARQUIVO", help="grava o resultado em JSON (útil no executável sem console)")
+    d.add_argument("--estrito", action="store_true", help="avisos também contam como falha")
+
     sub.add_parser("listar", help="lista as extrações")
     av = sub.add_parser("autoteste-visualizador", help=argparse.SUPPRESS)
     av.add_argument("html")
@@ -99,6 +105,16 @@ def main(argv: list[str] | None = None) -> int:
         v.grab().save(a.png)
         print(f"modo={v.modo} carregou={pronto}")
         return 0
+
+    if a.cmd == "diagnostico":
+        import json
+        from . import diagnostico as D
+        res = D.executar(cfg, rede=not a.sem_rede)
+        print(D.texto(res))
+        if a.json:
+            Path(a.json).write_text(json.dumps({"ok": res.ok, "checagens": [c.como_dict() for c in res.checagens]},
+                                               ensure_ascii=False, indent=2), encoding="utf-8")
+        return 0 if res.ok and not (a.estrito and res.avisos) else 1
 
     if a.cmd == "template":
         from .planilhas import gerar_template
