@@ -22,3 +22,5 @@ dist/
 .venv-ci/
 build-ci/
 dist-ci/
+.claude/settings.local.json
+.claude/worktrees/
