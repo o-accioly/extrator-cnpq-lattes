@@ -7,9 +7,9 @@
 #     (removal = major, feature = minor, demais = patch), o towncrier escreve o CHANGELOG.md,
 #     sai a tag vX.Y.Z, a Release com os executáveis e o back-merge main -> homolog.
 #
-# Onde roda: runners do GitHub (Windows nativo para o .exe). Com a variável do repositório
-# USAR_RUNNER_PROPRIO=true, os builds vão para o runner self-hosted (deploy/ci-runner,
-# label lattes-ci) e o .exe é gerado no Wine.
+# Onde roda: runners do GitHub. Com a variável do repositório USAR_RUNNER_PROPRIO=true, testes e
+# executável Linux vão para o runner self-hosted (deploy/ci-runner, label lattes-ci). O .exe fica
+# sempre num Windows do GitHub: o PySide6 atual não carrega no Wine.
 name: CI
 
 on:
@@ -112,7 +112,7 @@ jobs:
   windows:
     name: Windows (.exe)
     needs: versao
-    runs-on: ${{ vars.USAR_RUNNER_PROPRIO == 'true' && fromJSON('["self-hosted","lattes-ci"]') || 'windows-2022' }}
+    runs-on: windows-2022
     timeout-minutes: 75
     defaults:
       run:
@@ -120,7 +120,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        if: runner.environment == 'github-hosted'
         with:
           python-version: "3.12"
           cache: pip

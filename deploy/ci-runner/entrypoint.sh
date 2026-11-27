@@ -40,15 +40,8 @@ job_env=(
   RUNNER_MANUALLY_TRAP_SIG=1
   ACTIONS_RUNNER_PRINT_LOG_TO_STDOUT=1
   RUNNER_SLOT="$RUNNER_SLOT"
-  # Caches entre jobs (pip Linux e pip do Python Windows no Wine)
+  # Cache do pip entre jobs
   PIP_CACHE_DIR="$CACHE_ROOT/pip"
-  PIP_CACHE_DIR_WIN="Z:${CACHE_ROOT//\//\\}\\pip-win"
-  # Wine e o Python Windows que gera o .exe (ver Dockerfile)
-  WINEPREFIX="${WINEPREFIX:-/opt/wineprefix}"
-  WINEARCH=win64
-  WINEDEBUG=-all
-  "WINEDLLOVERRIDES=mscoree,mshtml="
-  PYTHON_WIN="${PYTHON_WIN:-/opt/winpython/python.exe}"
   # Qt sem tela (testes e capturas)
   QT_QPA_PLATFORM=offscreen
   "QTWEBENGINE_CHROMIUM_FLAGS=--disable-gpu --no-sandbox"
