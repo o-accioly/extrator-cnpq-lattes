@@ -4,6 +4,11 @@ Todas as mudanças relevantes do Extrator CNPq Lattes. Gerado pelo towncrier a p
 
 <!-- towncrier release notes start -->
 
+## [2.0.1] — 2026-11-27
+### Documentação
+
+- O repositório agora tem licença MIT e instruções para baixar o programa pronto.
+
 ## [2.0.0] - 27/11/2026
 
 ### Novidades
