@@ -37,13 +37,13 @@ Também existe um runner self-hosted em [`deploy/ci-runner/`](../deploy/ci-runne
 - tem prioridade de CPU menor que a dos outros serviços da máquina e teto de 8 CPUs e 12 GB de RAM;
 - mantém a pasta de trabalho em RAM; só o cache do pip fica em disco.
 
-A imagem acrescenta à oficial do runner o Python 3.12, as bibliotecas do Qt/QtWebEngine, o Wine e um Python 3.12 para Windows (pacote oficial do NuGet). Nesse runner o `.exe` é gerado pelo PyInstaller rodando no Wine.
+A imagem acrescenta à oficial do runner o Python 3.12 e as bibliotecas do Qt/QtWebEngine. Nele rodam os testes e o executável Linux. O `.exe` continua sempre num Windows do GitHub: o PySide6 atual não carrega no Wine (testado com Wine 9, Python 3.11/3.12 e o runtime do Visual C++).
 
 Para ligar o runner self-hosted:
 
 1. Crie um token *fine-grained* restrito a este repositório, com a permissão **Administration: Read and write** e nada além.
 2. No serviço que sobe o `deploy/ci-runner/docker-compose.yml`, defina `GITHUB_RUNNER_PAT=<token>` e faça o deploy.
-3. Em *Settings → Secrets and variables → Actions → Variables*, crie `USAR_RUNNER_PROPRIO=true`. Os jobs passam a usar o label `lattes-ci`. Apagar a variável volta para os runners do GitHub.
+3. Em *Settings → Secrets and variables → Actions → Variables*, crie `USAR_RUNNER_PROPRIO=true`. Testes e Linux passam a usar o label `lattes-ci`. Apagar a variável volta para os runners do GitHub.
 
 ## Rodar o build localmente (mesma imagem do runner)
 
@@ -52,7 +52,7 @@ docker build -f deploy/ci-runner/Dockerfile -t lattes-ci-runner .
 ```
 
 ```bash
-docker run --rm --entrypoint bash -u runner -v "$PWD":/src -w /src lattes-ci-runner -lc 'ci/build_linux.sh local && ci/build_windows.sh local'
+docker run --rm --entrypoint bash -u runner -v "$PWD":/src -w /src lattes-ci-runner -lc 'ci/build_linux.sh local'
 ```
 
 Os arquivos saem em `dist-ci/`.
